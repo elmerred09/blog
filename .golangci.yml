@@ -1,0 +1,18 @@
+version: "2"
+
+run:
+  timeout: 3m
+
+linters:
+  # Default set (standard): errcheck, govet, ineffassign, staticcheck, unused
+  enable:
+    - bodyclose
+    - sqlclosecheck
+    - rowserrcheck
+    - noctx
+    - errorlint
+    - misspell
+
+formatters:
+  enable:
+    - goimports # gofmt plus import grouping, matches organizeImports in the editor

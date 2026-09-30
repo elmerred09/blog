@@ -1,0 +1,31 @@
+---
+description: Next.js conventions for the blog frontend
+globs: web/**
+alwaysApply: false
+---
+
+# Web (Next.js App Router)
+
+- Server components by default. Add `"use client"` only for state, effects, or browser APIs, and keep those components small and at the leaves.
+- Fetch data in server components through the typed API client. Don't call `fetch` against the Go API ad hoc in components.
+- The API client lives in one place (e.g. `web/lib/api`), with types matching the Go JSON responses. Don't use `any`.
+- Post pages use time-based revalidation (`next: { revalidate: N }`); don't fetch with `no-store` unless the data is truly per-request.
+
+```tsx
+// BAD: client component just to fetch
+"use client";
+export default function Posts() {
+  const [posts, setPosts] = useState([]);
+  useEffect(() => { fetch("/api/posts").then(/* ... */); }, []);
+}
+
+// GOOD: server component using the typed client
+import { listPosts } from "@/lib/api";
+
+export default async function Posts() {
+  const { items } = await listPosts();
+  return <PostList posts={items} />;
+}
+```
+
+- Search input is a client component that updates the URL query (`?q=`); the results page stays a server component reading `searchParams`.

@@ -1,0 +1,16 @@
+# Git hooks. Install once per clone with: make hooks
+
+pre-commit:
+  parallel: true
+  commands:
+    lint:
+      glob: "*.go"
+      run: make lint
+    sqlc-diff:
+      glob: "{db/queries/*.sql,db/migrations/*.sql,internal/db/*}"
+      run: make sqlc-check
+
+pre-push:
+  commands:
+    test:
+      run: make test

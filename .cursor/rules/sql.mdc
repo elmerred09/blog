@@ -1,0 +1,45 @@
+---
+description: SQL conventions for migrations and sqlc queries
+globs: db/**
+alwaysApply: false
+---
+
+# SQL and Migrations
+
+## Migrations (goose, `db/migrations`)
+
+- Append-only. Never edit a migration that has been committed; add a new one.
+- Every migration has both `-- +goose Up` and `-- +goose Down`, and the Down must actually reverse the Up.
+- Regenerate sqlc after any schema change (`make sqlc`, then `make sqlc-check`).
+
+## Queries (sqlc, `db/queries`)
+
+- Every query that filters, joins, or sorts needs an index justification: add a comment naming the index it relies on, or say why a scan is acceptable.
+- Paginate lists with keyset pagination on `(published_at, id)`. Never `OFFSET`.
+- Select explicit columns, not `SELECT *`.
+- Use sqlc parameters (`$1`, `sqlc.arg(name)`); never build SQL by string concatenation.
+
+```sql
+-- BAD: OFFSET gets slower the deeper the page
+SELECT id, slug, title FROM posts ORDER BY published_at DESC LIMIT 20 OFFSET 1000;
+
+-- GOOD: keyset, first page when the cursor args are NULL.
+-- Index: CREATE INDEX ON posts (published_at DESC, id DESC) WHERE status = 'published';
+-- name: ListPosts :many
+SELECT id, slug, title, published_at
+FROM posts
+WHERE status = 'published'
+  AND (
+    sqlc.narg(after_published_at)::timestamptz IS NULL
+    OR (published_at, id) < (sqlc.narg(after_published_at)::timestamptz, sqlc.narg(after_id)::bigint)
+  )
+ORDER BY published_at DESC, id DESC
+LIMIT sqlc.arg(page_size);
+```
+
+The index should be partial (`WHERE status = 'published'`) to match the query's filter. Use `sqlc.narg` for the optional cursor so page 1 needs no sentinel values.
+
+## Search
+
+- Use `websearch_to_tsquery`, rank with `ts_rank_cd`.
+- Apply `ts_headline` only to the top N ranked rows, never the full result set (it re-parses documents).

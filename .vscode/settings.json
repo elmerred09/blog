@@ -1,0 +1,17 @@
+{
+    "[go]": {
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+        }
+    },
+    "go.lintTool": "golangci-lint",
+    "emeraldwalk.runonsave": {
+        "commands": [
+            {
+                "match": "db/(queries|migrations)/.*\\.sql$",
+                "cmd": "make sqlc"
+            }
+        ]
+    }
+}

@@ -1,0 +1,78 @@
+---
+description: Go conventions for the blog API (errors, context, structure, tests)
+globs: **/*.go
+alwaysApply: false
+---
+
+# Go Conventions
+
+- `internal/db` is sqlc-generated. Never edit it; change `db/queries` and run `make sqlc`.
+- Format and lint are enforced by hooks (`make fmt`, `make lint`). Don't fight them.
+
+## Errors
+
+Wrap with context using `%w`; compare with `errors.Is` / `errors.As`, never `==` or string matching.
+
+```go
+// BAD
+if err != nil {
+    return err
+}
+
+// GOOD
+if err != nil {
+    return fmt.Errorf("get post %q: %w", slug, err)
+}
+```
+
+## Context
+
+- Every function that does I/O (DB, HTTP) takes `ctx context.Context` as its first parameter.
+- Pass the request's context down. Don't use `context.Background()` outside `main` and tests.
+
+## Structure
+
+- No global mutable state or `init()` side effects. Pass dependencies explicitly (constructors).
+- Keep interfaces small and define them consumer-side by default (e.g. the post repository). Provider-side is intended only when there are multiple implementations, like `search.Searcher` (Postgres now, Elasticsearch later); don't move it.
+- Group packages by domain (`post`, `search`), not by layer.
+- Use `log/slog` for logging, with structured key/value attrs.
+
+## HTTP (gin)
+
+- Gin types stay inside `internal/httpapi`. Services in `post` and `search` take `context.Context` and plain structs.
+- Handlers pass `c.Request.Context()` to services, never `c` itself (`gin.Context` doesn't forward cancellation by default).
+- Build the engine with `gin.New()` plus slog request-logging middleware and `gin.Recovery()`, not `gin.Default()` (its logger bypasses slog).
+
+```go
+// BAD: gin leaks into the service, and the default logger bypasses slog
+r := gin.Default()
+r.GET("/api/posts/:slug", func(c *gin.Context) {
+    post, err := svc.Get(c, c.Param("slug")) // svc depends on *gin.Context
+})
+
+// GOOD
+r := gin.New()
+r.Use(slogMiddleware(logger), gin.Recovery())
+r.GET("/api/posts/:slug", func(c *gin.Context) {
+    post, err := svc.Get(c.Request.Context(), c.Param("slug"))
+})
+```
+
+## Tests
+
+Prefer table-driven tests with `t.Run`. Integration tests use a real Postgres via testcontainers, not mocks.
+
+```go
+tests := []struct {
+    name string
+    in   string
+    want string
+}{
+    {"empty", "", ""},
+}
+for _, tc := range tests {
+    t.Run(tc.name, func(t *testing.T) {
+        // ...
+    })
+}
+```
