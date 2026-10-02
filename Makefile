@@ -5,12 +5,39 @@ export PATH := $(PATH):$(GOROOT)/bin:$(GOPATH)/bin
 
 SQLC := $(GO) tool sqlc
 LEFTHOOK := $(GO) tool lefthook
+GOOSE := $(GO) tool goose
 
-.PHONY: sqlc sqlc-check lint fmt fmt-check test hooks
+GOOSE_DRIVER := postgres
+GOOSE_MIGRATION_DIR := db/migrations
+GOOSE_DBSTRING ?= postgres://blog:blog@localhost:5432/blog?sslmode=disable
 
 # Files for fmt targets; override with FILES="a.go b.go".
 # Note: FILES is expanded unquoted, so paths containing spaces are unsupported.
 FILES ?= .
+
+.PHONY: sqlc sqlc-check lint fmt fmt-check test hooks migrate migrate-down migrate-status migrate-new up down restart
+
+up:
+	docker compose up -d
+
+down:
+	docker compose down
+
+restart:
+	docker compose down
+	docker compose up -d
+
+migrate:
+	$(GOOSE) $(GOOSE_DRIVER) -dir $(GOOSE_MIGRATION_DIR) $(GOOSE_DBSTRING) up
+
+migrate-down:
+	$(GOOSE) $(GOOSE_DRIVER) -dir $(GOOSE_MIGRATION_DIR) $(GOOSE_DBSTRING) down
+
+migrate-status:
+	$(GOOSE) $(GOOSE_DRIVER) -dir $(GOOSE_MIGRATION_DIR) $(GOOSE_DBSTRING) status
+
+migrate-new:
+	$(GOOSE) $(GOOSE_DRIVER) -dir $(GOOSE_MIGRATION_DIR) $(GOOSE_DBSTRING) create $(NAME) sql
 
 sqlc:
 	@if [ -f sqlc.yaml ]; then $(SQLC) generate; else echo "sqlc.yaml not found, skipping sqlc generate"; fi
