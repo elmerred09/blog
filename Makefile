@@ -11,11 +11,15 @@ GOOSE_DRIVER := postgres
 GOOSE_MIGRATION_DIR := db/migrations
 GOOSE_DBSTRING ?= postgres://blog:blog@localhost:5432/blog?sslmode=disable
 
+# Seed file for `make seed`: a name in db/seed without the .sql suffix, e.g. SEED=posts-tags.
+SEED_DIR := db/seed
+SEED ?= posts-tags
+
 # Files for fmt targets; override with FILES="a.go b.go".
 # Note: FILES is expanded unquoted, so paths containing spaces are unsupported.
 FILES ?= .
 
-.PHONY: sqlc sqlc-check lint fmt fmt-check test hooks migrate migrate-down migrate-status migrate-new up down restart
+.PHONY: sqlc sqlc-check lint fmt fmt-check test hooks migrate migrate-down migrate-status migrate-new up down restart seed
 
 up:
 	docker compose up -d
@@ -38,6 +42,15 @@ migrate-status:
 
 migrate-new:
 	$(GOOSE) $(GOOSE_DRIVER) -dir $(GOOSE_MIGRATION_DIR) $(GOOSE_DBSTRING) create $(NAME) sql
+
+seed:
+	@if [ -z "$(SEED)" ] || [ ! -f "$(SEED_DIR)/$(SEED).sql" ]; then \
+		echo "usage: make seed SEED=<name>"; \
+		echo "available seeds:"; \
+		ls $(SEED_DIR) | sed -n 's/\.sql$$//p' | sed 's/^/  /'; \
+		exit 1; \
+	fi
+	docker compose exec -T postgres psql "$(GOOSE_DBSTRING)" -v ON_ERROR_STOP=1 < $(SEED_DIR)/$(SEED).sql
 
 sqlc:
 	@if [ -f sqlc.yaml ]; then $(SQLC) generate; else echo "sqlc.yaml not found, skipping sqlc generate"; fi
