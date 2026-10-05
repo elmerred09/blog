@@ -2,6 +2,7 @@ package querytest
 
 import (
 	"errors"
+	"maps"
 	"slices"
 	"testing"
 	"time"
@@ -122,12 +123,14 @@ func TestReplaceTagsForPost(t *testing.T) {
 	ctx := t.Context()
 
 	post := dbtest.InsertPost(t, pool, dbtest.WithTags("old-a", "old-b"))
+	other := dbtest.InsertPost(t, pool, dbtest.WithTags("old-a", "old-b"))
+	oldA := dbtest.InsertTag(t, pool, "old-a")
 	newA := dbtest.InsertTag(t, pool, "new-a")
 	newB := dbtest.InsertTag(t, pool, "new-b")
 
-	tagSlugs := func(t *testing.T) []string {
+	tagSlugs := func(t *testing.T, postID uuid.UUID) []string {
 		t.Helper()
-		rows, err := q.ListTagsForPost(ctx, post.ID)
+		rows, err := q.ListTagsForPost(ctx, postID)
 		if err != nil {
 			t.Fatalf("ListTagsForPost: %v", err)
 		}
@@ -138,7 +141,9 @@ func TestReplaceTagsForPost(t *testing.T) {
 		return out
 	}
 
-	replace := func(t *testing.T, tagIDs []int32, commit bool) {
+	// replace runs the importer's link update in a transaction and checks how
+	// many stale links DeleteTagsForPostExcept removed.
+	replace := func(t *testing.T, tagIDs []int32, wantRemoved int64, commit bool) {
 		t.Helper()
 		tx, err := pool.Begin(ctx)
 		if err != nil {
@@ -147,8 +152,12 @@ func TestReplaceTagsForPost(t *testing.T) {
 		defer func() { _ = tx.Rollback(ctx) }()
 
 		qtx := q.WithTx(tx)
-		if err := qtx.DeleteTagsForPost(ctx, post.ID); err != nil {
-			t.Fatalf("DeleteTagsForPost: %v", err)
+		removed, err := qtx.DeleteTagsForPostExcept(ctx, db.DeleteTagsForPostExceptParams{PostID: post.ID, TagIds: tagIDs})
+		if err != nil {
+			t.Fatalf("DeleteTagsForPostExcept: %v", err)
+		}
+		if removed != wantRemoved {
+			t.Errorf("DeleteTagsForPostExcept removed %d links, want %d", removed, wantRemoved)
 		}
 		if err := qtx.SetTagsForPost(ctx, db.SetTagsForPostParams{PostID: post.ID, TagIds: tagIDs}); err != nil {
 			t.Fatalf("SetTagsForPost: %v", err)
@@ -161,23 +170,48 @@ func TestReplaceTagsForPost(t *testing.T) {
 	}
 
 	t.Run("rolled back replace keeps the old tags", func(t *testing.T) {
-		replace(t, []int32{newA}, false)
-		if got, want := tagSlugs(t), []string{"old-a", "old-b"}; !slices.Equal(got, want) {
+		replace(t, []int32{newA}, 2, false)
+		if got, want := tagSlugs(t, post.ID), []string{"old-a", "old-b"}; !slices.Equal(got, want) {
 			t.Errorf("tags = %v, want %v", got, want)
 		}
 	})
 
 	t.Run("committed replace leaves exactly the new tags", func(t *testing.T) {
-		replace(t, []int32{newB, newA, newA}, true) // duplicate id is ignored
-		if got, want := tagSlugs(t), []string{"new-a", "new-b"}; !slices.Equal(got, want) {
+		replace(t, []int32{newB, newA, newA}, 2, true) // duplicate id is ignored
+		if got, want := tagSlugs(t, post.ID), []string{"new-a", "new-b"}; !slices.Equal(got, want) {
 			t.Errorf("tags = %v, want %v", got, want)
 		}
 	})
 
+	t.Run("same set again writes no new row versions", func(t *testing.T) {
+		before := linkVersions(t, pool, post.ID)
+		replace(t, []int32{newA, newB}, 0, true)
+		if after := linkVersions(t, pool, post.ID); !maps.Equal(after, before) {
+			t.Errorf("post_tags row versions changed:\nbefore %v\n after %v", before, after)
+		}
+	})
+
+	t.Run("partial change keeps the shared link's row", func(t *testing.T) {
+		before := linkVersions(t, pool, post.ID)
+		replace(t, []int32{newA, oldA}, 1, true) // new-b goes, new-a stays
+		if got, want := tagSlugs(t, post.ID), []string{"new-a", "old-a"}; !slices.Equal(got, want) {
+			t.Errorf("tags = %v, want %v", got, want)
+		}
+		if after := linkVersions(t, pool, post.ID); after[newA] != before[newA] {
+			t.Errorf("new-a link row version changed from %+v to %+v", before[newA], after[newA])
+		}
+	})
+
 	t.Run("empty list removes every tag", func(t *testing.T) {
-		replace(t, []int32{}, true)
-		if got := tagSlugs(t); len(got) != 0 {
+		replace(t, []int32{}, 2, true)
+		if got := tagSlugs(t, post.ID); len(got) != 0 {
 			t.Errorf("tags = %v, want none", got)
+		}
+	})
+
+	t.Run("other posts' links are untouched", func(t *testing.T) {
+		if got, want := tagSlugs(t, other.ID), []string{"old-a", "old-b"}; !slices.Equal(got, want) {
+			t.Errorf("other post's tags = %v, want %v", got, want)
 		}
 	})
 }

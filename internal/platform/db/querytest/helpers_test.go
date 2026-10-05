@@ -73,6 +73,50 @@ func ids(rows []listed) []uuid.UUID {
 	return out
 }
 
+// version identifies one physical row version: an UPDATE writes a new tuple
+// with a new xmin and ctid, while a skipped update leaves both alone.
+type version struct {
+	xmin, ctid string
+}
+
+func postVersion(t *testing.T, conn db.DBTX, slug string) version {
+	t.Helper()
+	var v version
+	err := conn.QueryRow(t.Context(),
+		`SELECT xmin::text, ctid::text FROM posts WHERE slug = $1`, slug,
+	).Scan(&v.xmin, &v.ctid)
+	if err != nil {
+		t.Fatalf("read row version of post %q: %v", slug, err)
+	}
+	return v
+}
+
+// linkVersions returns the row version of each of a post's post_tags rows, by tag id.
+func linkVersions(t *testing.T, conn db.DBTX, postID uuid.UUID) map[int32]version {
+	t.Helper()
+	rows, err := conn.Query(t.Context(),
+		`SELECT tag_id, xmin::text, ctid::text FROM post_tags WHERE post_id = $1`, postID)
+	if err != nil {
+		t.Fatalf("read post_tags row versions: %v", err)
+	}
+	defer rows.Close()
+	out := map[int32]version{}
+	for rows.Next() {
+		var (
+			tagID int32
+			v     version
+		)
+		if err := rows.Scan(&tagID, &v.xmin, &v.ctid); err != nil {
+			t.Fatalf("scan post_tags row version: %v", err)
+		}
+		out[tagID] = v
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("read post_tags row versions: %v", err)
+	}
+	return out
+}
+
 // tieFixture inserts n posts at distinct times plus a group of posts sharing
 // one published_at, placed so the group straddles the boundary between pages.
 // Every post gets opts (for example a tag). It returns the inserted posts.

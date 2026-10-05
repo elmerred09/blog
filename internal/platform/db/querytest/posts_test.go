@@ -191,6 +191,145 @@ func TestUpsertPost(t *testing.T) {
 	})
 }
 
+// TestUpsertPostSkipsUnchanged walks one post through a sequence of imports and
+// checks after each whether Postgres wrote a new row version.
+func TestUpsertPostSkipsUnchanged(t *testing.T) {
+	t.Parallel()
+	pool, q := env.NewDB(t)
+	ctx := t.Context()
+
+	draft := db.UpsertPostParams{
+		Slug:     "draft",
+		Title:    "Draft",
+		Summary:  "Not yet",
+		BodyMd:   "# Draft",
+		BodyHtml: "<h1>Draft</h1>",
+	}
+	publishedAt := dbtest.Now(t, pool).Add(-time.Hour).Truncate(time.Microsecond)
+	published := draft
+	published.PublishedAt = &publishedAt
+
+	id, err := q.UpsertPost(ctx, draft)
+	if err != nil {
+		t.Fatalf("insert: %v", err)
+	}
+
+	// skipped asserts the upsert wrote nothing, and that GetPostIDBySlug still
+	// finds the id the importer needs.
+	skipped := func(t *testing.T, params db.UpsertPostParams) {
+		t.Helper()
+		before := postVersion(t, pool, params.Slug)
+		if _, err := q.UpsertPost(ctx, params); !errors.Is(err, pgx.ErrNoRows) {
+			t.Fatalf("UpsertPost: err = %v, want pgx.ErrNoRows for unchanged content", err)
+		}
+		if after := postVersion(t, pool, params.Slug); after != before {
+			t.Errorf("row version changed from %+v to %+v, want no new version", before, after)
+		}
+		got, err := q.GetPostIDBySlug(ctx, params.Slug)
+		if err != nil {
+			t.Fatalf("GetPostIDBySlug: %v", err)
+		}
+		if got != id {
+			t.Errorf("GetPostIDBySlug = %v, want %v", got, id)
+		}
+	}
+
+	// updated asserts the upsert wrote a new row version and returned the same id.
+	updated := func(t *testing.T, params db.UpsertPostParams) {
+		t.Helper()
+		before := postVersion(t, pool, params.Slug)
+		got, err := q.UpsertPost(ctx, params)
+		if err != nil {
+			t.Fatalf("UpsertPost: %v", err)
+		}
+		if got != id {
+			t.Errorf("returned id %v, want %v", got, id)
+		}
+		if after := postVersion(t, pool, params.Slug); after.xmin == before.xmin {
+			t.Errorf("xmin still %s, want a new row version", after.xmin)
+		}
+	}
+
+	t.Run("same draft again is skipped (NULL published_at equals NULL)", func(t *testing.T) {
+		skipped(t, draft)
+	})
+	t.Run("publishing an otherwise unchanged draft updates", func(t *testing.T) {
+		updated(t, published)
+	})
+	t.Run("same published post again is skipped", func(t *testing.T) {
+		skipped(t, published)
+	})
+	t.Run("unpublishing updates", func(t *testing.T) {
+		updated(t, draft)
+	})
+	t.Run("changing only body_html updates", func(t *testing.T) {
+		rerendered := draft
+		rerendered.BodyHtml = `<h1 id="draft">Draft</h1>`
+		updated(t, rerendered)
+		draft = rerendered
+	})
+	t.Run("unchanged soft-deleted post is restored", func(t *testing.T) {
+		if _, err := q.SoftDeletePost(ctx, id); err != nil {
+			t.Fatalf("SoftDeletePost: %v", err)
+		}
+		updated(t, draft)
+		var deleted bool
+		if err := pool.QueryRow(ctx, `SELECT deleted_at IS NOT NULL FROM posts WHERE id = $1`, id).Scan(&deleted); err != nil {
+			t.Fatalf("read deleted_at: %v", err)
+		}
+		if deleted {
+			t.Error("deleted_at still set after re-import")
+		}
+	})
+	t.Run("updated_at is untouched by a skipped upsert", func(t *testing.T) {
+		var before, after time.Time
+		read := `SELECT updated_at FROM posts WHERE id = $1`
+		if err := pool.QueryRow(ctx, read, id).Scan(&before); err != nil {
+			t.Fatalf("read updated_at: %v", err)
+		}
+		skipped(t, draft)
+		if err := pool.QueryRow(ctx, read, id).Scan(&after); err != nil {
+			t.Fatalf("read updated_at: %v", err)
+		}
+		if !after.Equal(before) {
+			t.Errorf("updated_at moved from %v to %v", before, after)
+		}
+	})
+}
+
+func TestGetPostIDBySlug(t *testing.T) {
+	t.Parallel()
+	pool, q := env.NewDB(t)
+
+	tests := []struct {
+		name string
+		opts []dbtest.PostOption
+	}{
+		{"published", nil},
+		{"draft", []dbtest.PostOption{dbtest.Draft()}},
+		{"scheduled", []dbtest.PostOption{dbtest.ScheduledIn(time.Hour)}},
+		{"soft-deleted", []dbtest.PostOption{dbtest.Deleted()}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			p := dbtest.InsertPost(t, pool, tc.opts...)
+			got, err := q.GetPostIDBySlug(t.Context(), p.Slug)
+			if err != nil {
+				t.Fatalf("GetPostIDBySlug: %v", err)
+			}
+			if got != p.ID {
+				t.Errorf("id = %v, want %v", got, p.ID)
+			}
+		})
+	}
+
+	t.Run("unknown slug", func(t *testing.T) {
+		if _, err := q.GetPostIDBySlug(t.Context(), "missing"); !errors.Is(err, pgx.ErrNoRows) {
+			t.Errorf("err = %v, want pgx.ErrNoRows", err)
+		}
+	})
+}
+
 func TestSoftDeletePost(t *testing.T) {
 	t.Parallel()
 	pool, q := env.NewDB(t)

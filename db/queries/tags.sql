@@ -1,5 +1,5 @@
 -- name: UpsertTag :execrows
--- index: tags_slug_key (unique on slug) is the ON CONFLICT arbiter.
+-- index: tags_slug_key (unique on slug).
 INSERT INTO tags (slug, name)
 VALUES (sqlc.arg(slug), sqlc.arg(name))
 ON CONFLICT (slug) DO NOTHING;
@@ -20,10 +20,11 @@ JOIN post_tags pt ON t.id = pt.tag_id
 WHERE pt.post_id = sqlc.arg(post_id)
 ORDER BY t.slug ASC;
 
--- name: DeleteTagsForPost :exec
+-- name: DeleteTagsForPostExcept :execrows
 -- index: post_tags_pkey (post_id, tag_id), leading column.
 DELETE FROM post_tags
-WHERE post_id = sqlc.arg(post_id);
+WHERE post_id = sqlc.arg(post_id)
+  AND NOT (tag_id = ANY(sqlc.arg(tag_ids)::int[]));
 
 -- name: SetTagsForPost :exec
 -- index: post_tags_pkey (post_id, tag_id).
@@ -37,7 +38,7 @@ SELECT p.id, p.slug, p.title, p.published_at
 FROM posts p
 JOIN post_tags pt ON p.id = pt.post_id
 WHERE pt.tag_id = sqlc.arg(tag_id)
-  AND p.published_at <= now()
+  AND p.published_at <= CURRENT_TIMESTAMP
   AND p.deleted_at IS NULL
   AND (p.published_at, p.id) < (
     coalesce(sqlc.narg(after_published_at)::timestamptz, 'infinity'),

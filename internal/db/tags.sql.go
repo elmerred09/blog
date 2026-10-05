@@ -12,15 +12,24 @@ import (
 	"github.com/google/uuid"
 )
 
-const deleteTagsForPost = `-- name: DeleteTagsForPost :exec
+const deleteTagsForPostExcept = `-- name: DeleteTagsForPostExcept :execrows
 DELETE FROM post_tags
 WHERE post_id = $1
+  AND NOT (tag_id = ANY($2::int[]))
 `
 
+type DeleteTagsForPostExceptParams struct {
+	PostID uuid.UUID
+	TagIds []int32
+}
+
 // index: post_tags_pkey (post_id, tag_id), leading column.
-func (q *Queries) DeleteTagsForPost(ctx context.Context, postID uuid.UUID) error {
-	_, err := q.db.Exec(ctx, deleteTagsForPost, postID)
-	return err
+func (q *Queries) DeleteTagsForPostExcept(ctx context.Context, arg DeleteTagsForPostExceptParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteTagsForPostExcept, arg.PostID, arg.TagIds)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const getTagsBySlugs = `-- name: GetTagsBySlugs :many
@@ -62,7 +71,7 @@ SELECT p.id, p.slug, p.title, p.published_at
 FROM posts p
 JOIN post_tags pt ON p.id = pt.post_id
 WHERE pt.tag_id = $1
-  AND p.published_at <= now()
+  AND p.published_at <= CURRENT_TIMESTAMP
   AND p.deleted_at IS NULL
   AND (p.published_at, p.id) < (
     coalesce($2::timestamptz, 'infinity'),
@@ -181,7 +190,7 @@ type UpsertTagParams struct {
 	Name string
 }
 
-// index: tags_slug_key (unique on slug) is the ON CONFLICT arbiter.
+// index: tags_slug_key (unique on slug).
 func (q *Queries) UpsertTag(ctx context.Context, arg UpsertTagParams) (int64, error) {
 	result, err := q.db.Exec(ctx, upsertTag, arg.Slug, arg.Name)
 	if err != nil {

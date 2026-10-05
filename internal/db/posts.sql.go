@@ -16,7 +16,7 @@ const getPostBySlug = `-- name: GetPostBySlug :one
 SELECT id, slug, title, summary, body_md, body_html, published_at, deleted_at, created_at, updated_at
 FROM posts
 WHERE slug = $1
-    AND published_at <= now()
+    AND published_at <= CURRENT_TIMESTAMP
     AND deleted_at IS NULL
 LIMIT 1
 `
@@ -53,10 +53,25 @@ func (q *Queries) GetPostBySlug(ctx context.Context, slug string) (GetPostBySlug
 	return i, err
 }
 
+const getPostIDBySlug = `-- name: GetPostIDBySlug :one
+SELECT id
+FROM posts
+WHERE slug = $1
+LIMIT 1
+`
+
+// index: posts_slug_key (unique on slug).
+func (q *Queries) GetPostIDBySlug(ctx context.Context, slug string) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, getPostIDBySlug, slug)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const listPosts = `-- name: ListPosts :many
 SELECT id, slug, title, published_at
 FROM posts
-WHERE published_at <= now()
+WHERE published_at <= CURRENT_TIMESTAMP
   AND deleted_at IS NULL
   AND (published_at, id) < (
     coalesce($1::timestamptz, 'infinity'),
@@ -107,7 +122,7 @@ func (q *Queries) ListPosts(ctx context.Context, arg ListPostsParams) ([]ListPos
 
 const softDeletePost = `-- name: SoftDeletePost :one
 UPDATE posts
-SET deleted_at = now()
+SET deleted_at = CURRENT_TIMESTAMP
 WHERE id = $1
   AND deleted_at IS NULL
 RETURNING id
@@ -124,14 +139,15 @@ func (q *Queries) SoftDeletePost(ctx context.Context, id uuid.UUID) (uuid.UUID, 
 const upsertPost = `-- name: UpsertPost :one
 INSERT INTO posts (slug, title, summary, body_md, body_html, published_at)
 VALUES (
-    $1,
-    $2,
-    $3,
-    $4,
-    $5,
-    $6
+  $1,
+  $2,
+  $3,
+  $4,
+  $5,
+  $6
 )
-ON CONFLICT (slug) DO UPDATE SET
+ON CONFLICT (slug) DO UPDATE
+SET
   title = EXCLUDED.title,
   summary = EXCLUDED.summary,
   body_md = EXCLUDED.body_md,
@@ -139,6 +155,12 @@ ON CONFLICT (slug) DO UPDATE SET
   published_at = EXCLUDED.published_at,
   deleted_at = NULL,
   updated_at = CURRENT_TIMESTAMP
+WHERE (
+    (posts.title, posts.summary, posts.body_md, posts.body_html, posts.published_at)
+    IS DISTINCT FROM
+    (EXCLUDED.title, EXCLUDED.summary, EXCLUDED.body_md, EXCLUDED.body_html, EXCLUDED.published_at)
+  )
+  OR posts.deleted_at IS NOT NULL
 RETURNING id
 `
 
@@ -152,6 +174,8 @@ type UpsertPostParams struct {
 }
 
 // index: posts_slug_key (unique on slug).
+// Unchanged, live posts are skipped: no row is returned (pgx.ErrNoRows),
+// so look the id up with GetPostIDBySlug.
 func (q *Queries) UpsertPost(ctx context.Context, arg UpsertPostParams) (uuid.UUID, error) {
 	row := q.db.QueryRow(ctx, upsertPost,
 		arg.Slug,
