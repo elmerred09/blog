@@ -19,7 +19,10 @@ SEED ?= posts-tags
 # Note: FILES is expanded unquoted, so paths containing spaces are unsupported.
 FILES ?= .
 
-.PHONY: sqlc sqlc-check lint fmt fmt-check test hooks migrate migrate-down migrate-status migrate-new up down restart seed
+# Paths for `make import`, e.g. POSTS="content/a.md content/".
+POSTS ?=
+
+.PHONY: sqlc sqlc-check lint fmt fmt-check test hooks migrate migrate-down migrate-status migrate-new up down restart seed import
 
 up:
 	docker compose up -d
@@ -51,6 +54,10 @@ seed:
 		exit 1; \
 	fi
 	docker compose exec -T postgres psql "$(GOOSE_DBSTRING)" -v ON_ERROR_STOP=1 < $(SEED_DIR)/$(SEED).sql
+
+import:
+	@if [ -z "$(POSTS)" ]; then echo 'usage: make import POSTS="content/a.md content/"'; exit 2; fi
+	DATABASE_URL="$(GOOSE_DBSTRING)" $(GO) run ./cmd/blogctl import $(POSTS)
 
 sqlc:
 	@if [ -f sqlc.yaml ]; then $(SQLC) generate; else echo "sqlc.yaml not found, skipping sqlc generate"; fi
