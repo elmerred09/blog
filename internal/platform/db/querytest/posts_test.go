@@ -132,21 +132,28 @@ func TestUpsertPost(t *testing.T) {
 		PublishedAt: &publishedAt,
 	}
 
-	id, err := q.UpsertPost(ctx, params)
+	inserted, err := q.UpsertPost(ctx, params)
 	if err != nil {
 		t.Fatalf("insert: %v", err)
 	}
+	if !inserted.Created {
+		t.Error("first import: Created = false, want true")
+	}
+	id := inserted.ID
 
 	t.Run("re-import updates fields and keeps id", func(t *testing.T) {
 		edited := params
 		edited.Title, edited.BodyMd, edited.BodyHtml = "Hello again", "# Edited", "<h1>Edited</h1>"
 
-		id2, err := q.UpsertPost(ctx, edited)
+		row, err := q.UpsertPost(ctx, edited)
 		if err != nil {
 			t.Fatalf("update: %v", err)
 		}
-		if id2 != id {
-			t.Errorf("id changed from %v to %v", id, id2)
+		if row.ID != id {
+			t.Errorf("id changed from %v to %v", id, row.ID)
+		}
+		if row.Created {
+			t.Error("re-import: Created = true, want false")
 		}
 		got, err := q.GetPostBySlug(ctx, "hello")
 		if err != nil {
@@ -209,10 +216,11 @@ func TestUpsertPostSkipsUnchanged(t *testing.T) {
 	published := draft
 	published.PublishedAt = &publishedAt
 
-	id, err := q.UpsertPost(ctx, draft)
+	inserted, err := q.UpsertPost(ctx, draft)
 	if err != nil {
 		t.Fatalf("insert: %v", err)
 	}
+	id := inserted.ID
 
 	// skipped asserts the upsert wrote nothing, and that GetPostIDBySlug still
 	// finds the id the importer needs.
@@ -234,7 +242,8 @@ func TestUpsertPostSkipsUnchanged(t *testing.T) {
 		}
 	}
 
-	// updated asserts the upsert wrote a new row version and returned the same id.
+	// updated asserts the upsert wrote a new row version, returned the same id,
+	// and reported an update rather than an insert.
 	updated := func(t *testing.T, params db.UpsertPostParams) {
 		t.Helper()
 		before := postVersion(t, pool, params.Slug)
@@ -242,8 +251,11 @@ func TestUpsertPostSkipsUnchanged(t *testing.T) {
 		if err != nil {
 			t.Fatalf("UpsertPost: %v", err)
 		}
-		if got != id {
-			t.Errorf("returned id %v, want %v", got, id)
+		if got.ID != id {
+			t.Errorf("returned id %v, want %v", got.ID, id)
+		}
+		if got.Created {
+			t.Error("Created = true, want false for an update")
 		}
 		if after := postVersion(t, pool, params.Slug); after.xmin == before.xmin {
 			t.Errorf("xmin still %s, want a new row version", after.xmin)

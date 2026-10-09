@@ -22,11 +22,13 @@ ORDER BY t.slug ASC;
 
 -- name: DeleteTagsForPostExcept :execrows
 -- index: post_tags_pkey (post_id, tag_id), leading column.
+-- A NULL array would make NOT (tag_id = ANY(NULL)) NULL and delete nothing,
+-- so treat it as empty: no tags means remove every link.
 DELETE FROM post_tags
 WHERE post_id = sqlc.arg(post_id)
-  AND NOT (tag_id = ANY(sqlc.arg(tag_ids)::int[]));
+  AND NOT (tag_id = ANY(coalesce(sqlc.arg(tag_ids)::int[], '{}')));
 
--- name: SetTagsForPost :exec
+-- name: SetTagsForPost :execrows
 -- index: post_tags_pkey (post_id, tag_id).
 INSERT INTO post_tags (post_id, tag_id)
 SELECT sqlc.arg(post_id), UNNEST(sqlc.arg(tag_ids)::int[])

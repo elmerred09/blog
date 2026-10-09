@@ -15,7 +15,7 @@ import (
 const deleteTagsForPostExcept = `-- name: DeleteTagsForPostExcept :execrows
 DELETE FROM post_tags
 WHERE post_id = $1
-  AND NOT (tag_id = ANY($2::int[]))
+  AND NOT (tag_id = ANY(coalesce($2::int[], '{}')))
 `
 
 type DeleteTagsForPostExceptParams struct {
@@ -24,6 +24,8 @@ type DeleteTagsForPostExceptParams struct {
 }
 
 // index: post_tags_pkey (post_id, tag_id), leading column.
+// A NULL array would make NOT (tag_id = ANY(NULL)) NULL and delete nothing,
+// so treat it as empty: no tags means remove every link.
 func (q *Queries) DeleteTagsForPostExcept(ctx context.Context, arg DeleteTagsForPostExceptParams) (int64, error) {
 	result, err := q.db.Exec(ctx, deleteTagsForPostExcept, arg.PostID, arg.TagIds)
 	if err != nil {
@@ -162,7 +164,7 @@ func (q *Queries) ListTagsForPost(ctx context.Context, postID uuid.UUID) ([]List
 	return items, nil
 }
 
-const setTagsForPost = `-- name: SetTagsForPost :exec
+const setTagsForPost = `-- name: SetTagsForPost :execrows
 INSERT INTO post_tags (post_id, tag_id)
 SELECT $1, UNNEST($2::int[])
 ON CONFLICT (post_id, tag_id) DO NOTHING
@@ -174,9 +176,12 @@ type SetTagsForPostParams struct {
 }
 
 // index: post_tags_pkey (post_id, tag_id).
-func (q *Queries) SetTagsForPost(ctx context.Context, arg SetTagsForPostParams) error {
-	_, err := q.db.Exec(ctx, setTagsForPost, arg.PostID, arg.TagIds)
-	return err
+func (q *Queries) SetTagsForPost(ctx context.Context, arg SetTagsForPostParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setTagsForPost, arg.PostID, arg.TagIds)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const upsertTag = `-- name: UpsertTag :execrows

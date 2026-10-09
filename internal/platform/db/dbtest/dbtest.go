@@ -1,15 +1,17 @@
 // Package dbtest runs integration tests against a throwaway Postgres in Docker.
 //
-// Start launches one container per test package (call it from TestMain) and
+// Start launches one container per test package (Main wraps it for TestMain) and
 // migrates a template database. NewDB gives each test its own database cloned
 // from that template, so tests are isolated and can run in parallel.
 package dbtest
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"io/fs"
 	"log"
+	"os"
 	"sync/atomic"
 	"testing"
 
@@ -51,6 +53,33 @@ type Env struct {
 	baseCfg *pgxpool.Config
 	// next numbers the per-test databases (test_1, test_2, ...).
 	next atomic.Int64
+}
+
+// Main is a whole TestMain for packages with database tests:
+//
+//	var env *dbtest.Env
+//
+//	func TestMain(m *testing.M) { dbtest.Main(m, &env) }
+//
+// It starts Postgres, stores the Env in *env, runs the tests, and stops the
+// container. Under -short it starts nothing and leaves *env nil, so NewDB
+// skips the database tests and the rest still run.
+func Main(m *testing.M, env **Env) {
+	flag.Parse() // testing.Short needs parsed flags before m.Run
+	if testing.Short() {
+		m.Run()
+		return
+	}
+
+	e, stop, err := Start(context.Background())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "start test database: %v\n", err)
+		os.Exit(1)
+	}
+	defer stop()
+
+	*env = e
+	m.Run()
 }
 
 // Start runs Postgres in Docker, migrates the template database, and returns

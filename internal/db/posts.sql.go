@@ -161,7 +161,7 @@ WHERE (
     (EXCLUDED.title, EXCLUDED.summary, EXCLUDED.body_md, EXCLUDED.body_html, EXCLUDED.published_at)
   )
   OR posts.deleted_at IS NOT NULL
-RETURNING id
+RETURNING id, (old.id IS NULL)::boolean AS created
 `
 
 type UpsertPostParams struct {
@@ -173,10 +173,13 @@ type UpsertPostParams struct {
 	PublishedAt *time.Time
 }
 
+type UpsertPostRow struct {
+	ID      uuid.UUID
+	Created bool
+}
+
 // index: posts_slug_key (unique on slug).
-// Unchanged, live posts are skipped: no row is returned (pgx.ErrNoRows),
-// so look the id up with GetPostIDBySlug.
-func (q *Queries) UpsertPost(ctx context.Context, arg UpsertPostParams) (uuid.UUID, error) {
+func (q *Queries) UpsertPost(ctx context.Context, arg UpsertPostParams) (UpsertPostRow, error) {
 	row := q.db.QueryRow(ctx, upsertPost,
 		arg.Slug,
 		arg.Title,
@@ -185,7 +188,7 @@ func (q *Queries) UpsertPost(ctx context.Context, arg UpsertPostParams) (uuid.UU
 		arg.BodyHtml,
 		arg.PublishedAt,
 	)
-	var id uuid.UUID
-	err := row.Scan(&id)
-	return id, err
+	var i UpsertPostRow
+	err := row.Scan(&i.ID, &i.Created)
+	return i, err
 }

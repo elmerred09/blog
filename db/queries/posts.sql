@@ -1,7 +1,5 @@
 -- name: UpsertPost :one
 -- index: posts_slug_key (unique on slug).
--- Unchanged, live posts are skipped: no row is returned (pgx.ErrNoRows),
--- so look the id up with GetPostIDBySlug.
 INSERT INTO posts (slug, title, summary, body_md, body_html, published_at)
 VALUES (
   sqlc.arg(slug),
@@ -26,7 +24,7 @@ WHERE (
     (EXCLUDED.title, EXCLUDED.summary, EXCLUDED.body_md, EXCLUDED.body_html, EXCLUDED.published_at)
   )
   OR posts.deleted_at IS NOT NULL
-RETURNING id;
+RETURNING id, (old.id IS NULL)::boolean AS created;
 
 -- name: GetPostBySlug :one
 -- index: posts_slug_key (unique on slug).
