@@ -164,6 +164,41 @@ func (q *Queries) ListTagsForPost(ctx context.Context, postID uuid.UUID) ([]List
 	return items, nil
 }
 
+const listTagsForPosts = `-- name: ListTagsForPosts :many
+SELECT pt.post_id, t.slug, t.name
+FROM tags t
+JOIN post_tags pt ON t.id = pt.tag_id
+WHERE pt.post_id = ANY($1::uuid[])
+ORDER BY t.slug ASC
+`
+
+type ListTagsForPostsRow struct {
+	PostID uuid.UUID
+	Slug   string
+	Name   string
+}
+
+// index: post_tags_pkey (post_id, tag_id).
+func (q *Queries) ListTagsForPosts(ctx context.Context, postIds []uuid.UUID) ([]ListTagsForPostsRow, error) {
+	rows, err := q.db.Query(ctx, listTagsForPosts, postIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListTagsForPostsRow
+	for rows.Next() {
+		var i ListTagsForPostsRow
+		if err := rows.Scan(&i.PostID, &i.Slug, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const setTagsForPost = `-- name: SetTagsForPost :execrows
 INSERT INTO post_tags (post_id, tag_id)
 SELECT $1, UNNEST($2::int[])

@@ -228,6 +228,51 @@ func TestReplaceTagsForPost(t *testing.T) {
 	})
 }
 
+func TestListTagsForPosts(t *testing.T) {
+	t.Parallel()
+	pool, q := env.NewDB(t)
+
+	multi := dbtest.InsertPost(t, pool, dbtest.WithTags("search", "go", "postgres"))
+	single := dbtest.InsertPost(t, pool, dbtest.WithTags("postgres"))
+	untagged := dbtest.InsertPost(t, pool)
+	dbtest.InsertPost(t, pool, dbtest.WithTags("go")) // never asked for
+
+	tests := []struct {
+		name string
+		ids  []uuid.UUID
+		want map[uuid.UUID][]string
+	}{
+		{
+			"each post gets its own tags, sorted by slug",
+			[]uuid.UUID{single.ID, multi.ID},
+			map[uuid.UUID][]string{
+				multi.ID:  {"go", "postgres", "search"},
+				single.ID: {"postgres"},
+			},
+		},
+		{"untagged posts are absent", []uuid.UUID{untagged.ID, single.ID}, map[uuid.UUID][]string{single.ID: {"postgres"}}},
+		{"unknown ids are ignored", []uuid.UUID{uuid.New(), single.ID}, map[uuid.UUID][]string{single.ID: {"postgres"}}},
+		{"duplicate ids don't duplicate rows", []uuid.UUID{single.ID, single.ID}, map[uuid.UUID][]string{single.ID: {"postgres"}}},
+		{"empty array", []uuid.UUID{}, nil},
+		{"nil array", nil, nil}, // pgx sends NULL; = ANY(NULL) matches nothing
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			rows, err := q.ListTagsForPosts(t.Context(), tc.ids)
+			if err != nil {
+				t.Fatalf("ListTagsForPosts: %v", err)
+			}
+			got := map[uuid.UUID][]string{}
+			for _, r := range rows {
+				got[r.PostID] = append(got[r.PostID], r.Slug)
+			}
+			if !maps.EqualFunc(got, tc.want, slices.Equal) {
+				t.Errorf("tags by post = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestListPostsByTag(t *testing.T) {
 	t.Parallel()
 	pool, q := env.NewDB(t)

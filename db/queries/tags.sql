@@ -20,6 +20,14 @@ JOIN post_tags pt ON t.id = pt.tag_id
 WHERE pt.post_id = sqlc.arg(post_id)
 ORDER BY t.slug ASC;
 
+-- name: ListTagsForPosts :many
+-- index: post_tags_pkey (post_id, tag_id).
+SELECT pt.post_id, t.slug, t.name
+FROM tags t
+JOIN post_tags pt ON t.id = pt.tag_id
+WHERE pt.post_id = ANY(sqlc.arg(post_ids)::uuid[])
+ORDER BY t.slug ASC;
+
 -- name: DeleteTagsForPostExcept :execrows
 -- index: post_tags_pkey (post_id, tag_id), leading column.
 -- A NULL array would make NOT (tag_id = ANY(NULL)) NULL and delete nothing,

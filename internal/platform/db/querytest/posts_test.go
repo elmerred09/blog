@@ -159,8 +159,8 @@ func TestUpsertPost(t *testing.T) {
 		if err != nil {
 			t.Fatalf("GetPostBySlug: %v", err)
 		}
-		if got.Title != edited.Title || got.BodyMd != edited.BodyMd || got.BodyHtml != edited.BodyHtml {
-			t.Errorf("got title %q body %q html %q, want the edited values", got.Title, got.BodyMd, got.BodyHtml)
+		if got.Title != edited.Title || got.BodyHtml != edited.BodyHtml {
+			t.Errorf("got title %q html %q, want the edited values", got.Title, got.BodyHtml)
 		}
 	})
 

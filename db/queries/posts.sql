@@ -28,7 +28,7 @@ RETURNING id, (old.id IS NULL)::boolean AS created;
 
 -- name: GetPostBySlug :one
 -- index: posts_slug_key (unique on slug).
-SELECT id, slug, title, summary, body_md, body_html, published_at, deleted_at, created_at, updated_at
+SELECT id, slug, title, summary, body_html, published_at, deleted_at, created_at, updated_at
 FROM posts
 WHERE slug = sqlc.arg(slug)
     AND published_at <= CURRENT_TIMESTAMP
@@ -44,7 +44,7 @@ LIMIT 1;
 
 -- name: ListPosts :many
 -- index: posts_pagination_idx (published_at DESC, id DESC) WHERE published_at IS NOT NULL AND deleted_at IS NULL.
-SELECT id, slug, title, published_at
+SELECT id, slug, title, summary,published_at
 FROM posts
 WHERE published_at <= CURRENT_TIMESTAMP
   AND deleted_at IS NULL

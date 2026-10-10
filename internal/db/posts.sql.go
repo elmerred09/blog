@@ -13,7 +13,7 @@ import (
 )
 
 const getPostBySlug = `-- name: GetPostBySlug :one
-SELECT id, slug, title, summary, body_md, body_html, published_at, deleted_at, created_at, updated_at
+SELECT id, slug, title, summary, body_html, published_at, deleted_at, created_at, updated_at
 FROM posts
 WHERE slug = $1
     AND published_at <= CURRENT_TIMESTAMP
@@ -26,7 +26,6 @@ type GetPostBySlugRow struct {
 	Slug        string
 	Title       string
 	Summary     string
-	BodyMd      string
 	BodyHtml    string
 	PublishedAt *time.Time
 	DeletedAt   *time.Time
@@ -43,7 +42,6 @@ func (q *Queries) GetPostBySlug(ctx context.Context, slug string) (GetPostBySlug
 		&i.Slug,
 		&i.Title,
 		&i.Summary,
-		&i.BodyMd,
 		&i.BodyHtml,
 		&i.PublishedAt,
 		&i.DeletedAt,
@@ -69,7 +67,7 @@ func (q *Queries) GetPostIDBySlug(ctx context.Context, slug string) (uuid.UUID, 
 }
 
 const listPosts = `-- name: ListPosts :many
-SELECT id, slug, title, published_at
+SELECT id, slug, title, summary,published_at
 FROM posts
 WHERE published_at <= CURRENT_TIMESTAMP
   AND deleted_at IS NULL
@@ -91,6 +89,7 @@ type ListPostsRow struct {
 	ID          uuid.UUID
 	Slug        string
 	Title       string
+	Summary     string
 	PublishedAt *time.Time
 }
 
@@ -108,6 +107,7 @@ func (q *Queries) ListPosts(ctx context.Context, arg ListPostsParams) ([]ListPos
 			&i.ID,
 			&i.Slug,
 			&i.Title,
+			&i.Summary,
 			&i.PublishedAt,
 		); err != nil {
 			return nil, err
