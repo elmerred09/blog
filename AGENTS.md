@@ -33,7 +33,11 @@ Run everything through `make`; the Makefile sets up `PATH` for the Go tools.
 - `sqlc`, `goose`, and `lefthook` are pinned in `go.mod`; run them via `go tool <name>`, not from `~/go/bin`.
 - `make sqlc` / `make sqlc-check`: regenerate / verify sqlc output. They skip until `sqlc.yaml` exists.
 
-Planned targets (not yet added): `make dev`, `make migrate`.
+- `make up` / `make down`: start / stop the compose Postgres. `make migrate` applies migrations to it.
+- `make api`: run the API against the compose database (`HTTP_ADDR` defaults to `:8080`).
+- `make import POSTS="content/a.md content/"`: import markdown posts with `blogctl`.
+
+Both binaries require `DATABASE_URL`; the `make` targets set it to the compose database.
 
 Before finishing a change, `make lint` and `make test` should pass.
 

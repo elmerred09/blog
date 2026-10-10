@@ -22,7 +22,7 @@ FILES ?= .
 # Paths for `make import`, e.g. POSTS="content/a.md content/".
 POSTS ?=
 
-.PHONY: sqlc sqlc-check lint fmt fmt-check test hooks migrate migrate-down migrate-status migrate-new up down restart seed import
+.PHONY: sqlc sqlc-check lint fmt fmt-check test hooks migrate migrate-down migrate-status migrate-new up down restart seed import api
 
 up:
 	docker compose up -d
@@ -54,6 +54,9 @@ seed:
 		exit 1; \
 	fi
 	docker compose exec -T postgres psql "$(GOOSE_DBSTRING)" -v ON_ERROR_STOP=1 < $(SEED_DIR)/$(SEED).sql
+
+api:
+	DATABASE_URL="$(GOOSE_DBSTRING)" $(GO) run ./cmd/api
 
 import:
 	@if [ -z "$(POSTS)" ]; then echo 'usage: make import POSTS="content/a.md content/"'; exit 2; fi
