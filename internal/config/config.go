@@ -6,15 +6,23 @@ import (
 	"fmt"
 )
 
+// DefaultHTTPAddr is used when HTTP_ADDR is unset.
+const DefaultHTTPAddr = ":8080"
+
 type Config struct {
 	DatabaseURL string
+	HTTPAddr    string
 }
 
-// Load reads the config through getenv (os.Getenv in main). Every setting is
-// required; there are no defaults, so a missing variable fails loudly instead
-// of silently pointing at the wrong database.
+// Load reads the config through getenv (os.Getenv in main).
 func Load(getenv func(string) string) (Config, error) {
-	cfg := Config{DatabaseURL: getenv("DATABASE_URL")}
+	cfg := Config{
+		DatabaseURL: getenv("DATABASE_URL"),
+		HTTPAddr:    getenv("HTTP_ADDR"),
+	}
+	if cfg.HTTPAddr == "" {
+		cfg.HTTPAddr = DefaultHTTPAddr
+	}
 
 	var errs []error
 	if cfg.DatabaseURL == "" {

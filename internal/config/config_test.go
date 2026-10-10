@@ -14,20 +14,40 @@ func env(vars map[string]string) func(string) string {
 func TestLoad(t *testing.T) {
 	t.Parallel()
 
-	got, err := config.Load(env(map[string]string{"DATABASE_URL": "postgres://x/y"}))
-	if err != nil {
-		t.Fatalf("Load: %v", err)
+	tests := []struct {
+		name string
+		env  map[string]string
+		want config.Config
+	}{
+		{
+			name: "HTTP_ADDR defaults",
+			env:  map[string]string{"DATABASE_URL": "postgres://x/y"},
+			want: config.Config{DatabaseURL: "postgres://x/y", HTTPAddr: config.DefaultHTTPAddr},
+		},
+		{
+			name: "everything set",
+			env:  map[string]string{"DATABASE_URL": "postgres://x/y", "HTTP_ADDR": "127.0.0.1:9000"},
+			want: config.Config{DatabaseURL: "postgres://x/y", HTTPAddr: "127.0.0.1:9000"},
+		},
 	}
-	want := config.Config{DatabaseURL: "postgres://x/y"}
-	if got != want {
-		t.Errorf("Load() = %+v, want %+v", got, want)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := config.Load(env(tc.env))
+			if err != nil {
+				t.Fatalf("Load: %v", err)
+			}
+			if got != tc.want {
+				t.Errorf("Load() = %+v, want %+v", got, tc.want)
+			}
+		})
 	}
 }
 
 func TestLoadRequiresDatabaseURL(t *testing.T) {
 	t.Parallel()
 
-	_, err := config.Load(env(nil))
+	_, err := config.Load(env(map[string]string{"HTTP_ADDR": ":9000"}))
 	if err == nil {
 		t.Fatal("Load succeeded without DATABASE_URL")
 	}
