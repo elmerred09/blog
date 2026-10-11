@@ -1,11 +1,13 @@
 package httpapi
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -50,7 +52,7 @@ func validRequestID(id string) bool {
 
 // requestLogger writes one line per request after it completes: 5xx at Error,
 // 4xx at Warn, everything else at Info. The route is the registered pattern
-// (/api/posts/:slug), so lines group by endpoint rather than by URL.
+// (/api/v1/posts/:slug), so lines group by endpoint rather than by URL.
 func requestLogger(log *slog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
@@ -79,9 +81,21 @@ func requestLogger(log *slog.Logger) gin.HandlerFunc {
 			slog.String("request_id", c.GetString(requestIDKey)),
 		}
 		if len(c.Errors) > 0 {
-			attrs = append(attrs, slog.String("error", c.Errors.String()))
+			attrs = append(attrs, slog.String("error", strings.Join(c.Errors.Errors(), "; ")))
 		}
 		log.LogAttrs(c.Request.Context(), level, "request", attrs...)
+	}
+}
+
+// requestTimeout puts a deadline on the request context, so database calls made
+// with c.Request.Context() give up when it passes. http.Server's WriteTimeout
+// doesn't do this: it cuts off the response but leaves the handler running.
+func requestTimeout(d time.Duration) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx, cancel := context.WithTimeout(c.Request.Context(), d)
+		defer cancel()
+		c.Request = c.Request.WithContext(ctx)
+		c.Next()
 	}
 }
 

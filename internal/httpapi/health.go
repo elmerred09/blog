@@ -19,7 +19,16 @@ type healthBody struct {
 	Status string `json:"status"`
 }
 
-func health(db Pinger) gin.HandlerFunc {
+// livez reports that the process is up and serving. It checks nothing else:
+// the platform restarts the process when liveness fails, and a restart can't
+// fix a database outage, only cause a restart loop.
+func livez(c *gin.Context) {
+	c.JSON(http.StatusOK, healthBody{Status: "ok"})
+}
+
+// readyz reports whether this instance can serve traffic, which needs the
+// database. Failing it only takes the instance out of rotation.
+func readyz(db Pinger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx, cancel := context.WithTimeout(c.Request.Context(), healthTimeout)
 		defer cancel()

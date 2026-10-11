@@ -16,9 +16,23 @@ import (
 
 	"github.com/elmerred09/blog/internal/config"
 	"github.com/elmerred09/blog/internal/httpapi"
+	"github.com/elmerred09/blog/internal/platform/db/pgconfig"
+	"github.com/elmerred09/blog/internal/post"
 )
 
-const shutdownGrace = 10 * time.Second
+const (
+	readHeaderTimeout = 5 * time.Second
+	readTimeout       = 10 * time.Second
+	writeTimeout      = 15 * time.Second
+	idleTimeout       = 60 * time.Second
+	// requestTimeout is shorter than writeTimeout, so a request that runs out
+	// of time still has a few seconds to write its 503.
+	requestTimeout = 10 * time.Second
+	// statementTimeout is above requestTimeout, so a slow query hits the
+	// request deadline first; Postgres enforces it for anything run without one.
+	statementTimeout = 12 * time.Second
+	shutdownGrace    = 10 * time.Second
+)
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -40,9 +54,14 @@ func run(ctx context.Context, stopSignals func(), log *slog.Logger) error {
 		return err
 	}
 
-	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
+	poolCfg, err := pgxpool.ParseConfig(cfg.DatabaseURL)
 	if err != nil {
 		return fmt.Errorf("database config: %w", err)
+	}
+	pgconfig.Configure(poolCfg, statementTimeout)
+	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
+	if err != nil {
+		return fmt.Errorf("database pool: %w", err)
 	}
 	defer pool.Close()
 	if err := pool.Ping(ctx); err != nil {
@@ -51,12 +70,17 @@ func run(ctx context.Context, stopSignals func(), log *slog.Logger) error {
 
 	gin.SetMode(gin.ReleaseMode)
 	srv := &http.Server{
-		Addr:              cfg.HTTPAddr,
-		Handler:           httpapi.New(httpapi.Deps{Logger: log, DB: pool}),
-		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       10 * time.Second,
-		WriteTimeout:      15 * time.Second,
-		IdleTimeout:       60 * time.Second,
+		Addr: cfg.HTTPAddr,
+		Handler: httpapi.New(httpapi.Deps{
+			Logger:         log,
+			DB:             pool,
+			Posts:          post.NewService(pool),
+			RequestTimeout: requestTimeout,
+		}),
+		ReadHeaderTimeout: readHeaderTimeout,
+		ReadTimeout:       readTimeout,
+		WriteTimeout:      writeTimeout,
+		IdleTimeout:       idleTimeout,
 		ErrorLog:          slog.NewLogLogger(log.Handler(), slog.LevelError),
 	}
 
