@@ -67,7 +67,7 @@ func (q *Queries) GetPostIDBySlug(ctx context.Context, slug string) (uuid.UUID, 
 }
 
 const listPosts = `-- name: ListPosts :many
-SELECT id, slug, title, summary,published_at
+SELECT id, slug, title, summary, published_at
 FROM posts
 WHERE published_at <= CURRENT_TIMESTAMP
   AND deleted_at IS NULL

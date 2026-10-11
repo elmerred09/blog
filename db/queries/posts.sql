@@ -44,7 +44,7 @@ LIMIT 1;
 
 -- name: ListPosts :many
 -- index: posts_pagination_idx (published_at DESC, id DESC) WHERE published_at IS NOT NULL AND deleted_at IS NULL.
-SELECT id, slug, title, summary,published_at
+SELECT id, slug, title, summary, published_at
 FROM posts
 WHERE published_at <= CURRENT_TIMESTAMP
   AND deleted_at IS NULL
