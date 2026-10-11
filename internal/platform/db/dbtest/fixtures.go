@@ -1,6 +1,8 @@
 package dbtest
 
 import (
+	"bytes"
+	"slices"
 	"testing"
 	"time"
 
@@ -155,6 +157,38 @@ func TagPost(t testing.TB, conn db.DBTX, postID uuid.UUID, tagID int32) {
 	if _, err := conn.Exec(t.Context(), q, postID, tagID); err != nil {
 		t.Fatalf("tag post %s with %d: %v", postID, tagID, err)
 	}
+}
+
+// NewestFirst returns a sorted copy of posts in the order the list queries
+// promise: published_at descending, then id descending. Postgres compares
+// uuids bytewise, the same as bytes.Compare. Every post must be published.
+func NewestFirst(posts []Post) []Post {
+	sorted := slices.Clone(posts)
+	slices.SortFunc(sorted, func(a, b Post) int {
+		if c := b.PublishedAt.Compare(*a.PublishedAt); c != 0 {
+			return c
+		}
+		return bytes.Compare(b.ID[:], a.ID[:])
+	})
+	return sorted
+}
+
+// IDs returns the posts' ids, in order.
+func IDs(posts []Post) []uuid.UUID {
+	ids := make([]uuid.UUID, len(posts))
+	for i, p := range posts {
+		ids[i] = p.ID
+	}
+	return ids
+}
+
+// Slugs returns the posts' slugs, in order.
+func Slugs(posts []Post) []string {
+	slugs := make([]string, len(posts))
+	for i, p := range posts {
+		slugs[i] = p.Slug
+	}
+	return slugs
 }
 
 // Now returns the database's current time, for building exact published_at

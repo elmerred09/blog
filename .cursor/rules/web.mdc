@@ -16,7 +16,7 @@ alwaysApply: false
 "use client";
 export default function Posts() {
   const [posts, setPosts] = useState([]);
-  useEffect(() => { fetch("/api/posts").then(/* ... */); }, []);
+  useEffect(() => { fetch("/api/v1/posts").then(/* ... */); }, []);
 }
 
 // GOOD: server component using the typed client

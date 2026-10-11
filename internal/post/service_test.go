@@ -1,7 +1,6 @@
 package post_test
 
 import (
-	"bytes"
 	"errors"
 	"slices"
 	"testing"
@@ -39,23 +38,6 @@ func listAll(t *testing.T, svc *post.Service, limit int) ([]post.ListItem, int) 
 	return nil, 0
 }
 
-// newestFirst returns the posts' slugs in list order: published_at descending,
-// then id descending (Postgres compares uuids bytewise).
-func newestFirst(posts []dbtest.Post) []string {
-	sorted := slices.Clone(posts)
-	slices.SortFunc(sorted, func(a, b dbtest.Post) int {
-		if c := b.PublishedAt.Compare(*a.PublishedAt); c != 0 {
-			return c
-		}
-		return bytes.Compare(b.ID[:], a.ID[:])
-	})
-	slugs := make([]string, len(sorted))
-	for i, p := range sorted {
-		slugs[i] = p.Slug
-	}
-	return slugs
-}
-
 func itemSlugs(items []post.ListItem) []string {
 	slugs := make([]string, len(items))
 	for i, it := range items {
@@ -91,7 +73,7 @@ func TestListWalksEveryPublishedPost(t *testing.T) {
 	dbtest.InsertPost(t, pool, dbtest.Deleted())
 
 	got, pages := listAll(t, svc, 10)
-	if want := newestFirst(published); !slices.Equal(itemSlugs(got), want) {
+	if want := dbtest.Slugs(dbtest.NewestFirst(published)); !slices.Equal(itemSlugs(got), want) {
 		t.Errorf("items across pages:\n got %v\nwant %v", itemSlugs(got), want)
 	}
 	if pages != 3 {

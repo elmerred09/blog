@@ -1,8 +1,6 @@
 package querytest
 
 import (
-	"bytes"
-	"slices"
 	"testing"
 	"time"
 
@@ -45,24 +43,6 @@ func collectPages(t *testing.T, pageSize int, fetch pageFunc) ([]listed, int) {
 	}
 	t.Fatalf("still paginating after %d pages", maxPages)
 	return nil, 0
-}
-
-// newestFirst returns posts in the order the list queries promise:
-// published_at descending, then id descending. Postgres compares uuids
-// bytewise, the same as bytes.Compare.
-func newestFirst(posts []dbtest.Post) []uuid.UUID {
-	sorted := slices.Clone(posts)
-	slices.SortFunc(sorted, func(a, b dbtest.Post) int {
-		if c := b.PublishedAt.Compare(*a.PublishedAt); c != 0 {
-			return c
-		}
-		return bytes.Compare(b.ID[:], a.ID[:])
-	})
-	ids := make([]uuid.UUID, len(sorted))
-	for i, p := range sorted {
-		ids[i] = p.ID
-	}
-	return ids
 }
 
 func ids(rows []listed) []uuid.UUID {

@@ -295,7 +295,7 @@ func TestListPostsByTag(t *testing.T) {
 
 	t.Run("pages through exactly the tag's listable posts", func(t *testing.T) {
 		got, pages := collectPages(t, 10, listPostsByTagPages(t, q, goID, 10))
-		if want := newestFirst(tagged); !slices.Equal(ids(got), want) {
+		if want := dbtest.IDs(dbtest.NewestFirst(tagged)); !slices.Equal(ids(got), want) {
 			t.Errorf("rows across pages:\n got %v\nwant %v", ids(got), want)
 		}
 		if pages != 3 {

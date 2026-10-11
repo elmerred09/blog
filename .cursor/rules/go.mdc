@@ -47,14 +47,14 @@ if err != nil {
 ```go
 // BAD: gin leaks into the service, and the default logger bypasses slog
 r := gin.Default()
-r.GET("/api/posts/:slug", func(c *gin.Context) {
+r.GET("/api/v1/posts/:slug", func(c *gin.Context) {
     post, err := svc.Get(c, c.Param("slug")) // svc depends on *gin.Context
 })
 
 // GOOD
 r := gin.New()
 r.Use(slogMiddleware(logger), gin.Recovery())
-r.GET("/api/posts/:slug", func(c *gin.Context) {
+r.GET("/api/v1/posts/:slug", func(c *gin.Context) {
     post, err := svc.Get(c.Request.Context(), c.Param("slug"))
 })
 ```

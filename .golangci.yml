@@ -12,6 +12,20 @@ linters:
     - noctx
     - errorlint
     - misspell
+    - depguard
+  settings:
+    depguard:
+      rules:
+        # The API serves stored HTML; it must not link the markdown, chroma,
+        # and YAML libraries that internal/content pulls in.
+        read-side:
+          files:
+            - "**/cmd/api/**"
+            - "**/internal/httpapi/**"
+            - "**/internal/post/**"
+          deny:
+            - pkg: github.com/elmerred09/blog/internal/content
+              desc: ingestion is blogctl-only; the API reads posts through internal/post
 
 formatters:
   enable:

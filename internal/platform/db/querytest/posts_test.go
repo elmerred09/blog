@@ -68,7 +68,7 @@ func TestListPostsPagination(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			got, pages := collectPages(t, int(tc.pageSize), listPostsPages(t, q, tc.pageSize))
-			if want := newestFirst(posts); !slices.Equal(ids(got), want) {
+			if want := dbtest.IDs(dbtest.NewestFirst(posts)); !slices.Equal(ids(got), want) {
 				t.Errorf("rows across pages:\n got %v\nwant %v", ids(got), want)
 			}
 			if pages != tc.wantPages {
