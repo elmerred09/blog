@@ -31,6 +31,7 @@ Run everything through `make`; the Makefile sets up `PATH` for the Go tools.
 - `make fmt` / `make fmt-check`: gofmt (`FILES="a.go b.go"` to limit).
 - `make lint`: golangci-lint (config in `.golangci.yml`).
 - `make test`: `go test -race ./...`.
+- `make deps-check`: fail if `go.mod`/`go.sum` aren't tidy (`go mod tidy -diff`, `go mod verify`).
 - `make hooks`: install the git hooks (once per clone).
 - `sqlc`, `goose`, and `lefthook` are pinned in `go.mod`; run them via `go tool <name>`, not from `~/go/bin`.
 - `make sqlc` / `make sqlc-check`: regenerate / verify sqlc output. They skip until `sqlc.yaml` exists.
@@ -66,6 +67,8 @@ Scoped rules live in `.cursor/rules/` (`go.mdc`, `sql.mdc`, `web.mdc`). Key poin
 - After you edit a Go file, a hook runs `gofmt` on it. After edits under `db/queries` or `db/migrations`, it runs `make sqlc`. After you edit a file under `web/`, it runs Prettier on it. After you edit `api/openapi.yaml`, it runs `make web-types`.
 - When you stop, a hook runs `make lint` and asks you to continue if it reports issues. It doesn't run the web checks.
 - Git hooks (lefthook) run lint (which includes the gofmt check), `sqlc diff` and `make chroma-css-check` on commit, and tests on push. For `web/` and `api/openapi.yaml`, they run the web lint, typecheck, Prettier check and API types check on commit (each only when matching files are staged), and `make web-test` on push.
+
+- CI (`.github/workflows/ci.yml`, GitHub Actions) runs on pull requests and pushes to `main`, calling the same `make` targets. The `go` job runs `fmt-check`, `lint` (golangci-lint v2.14.0, built from source with the repo's Go), `sqlc-check`, `chroma-css-check`, `deps-check` and `test` (Docker for the testcontainers tests). The `web` job runs `web-install`, `web-check` and `web-build`. Unlike the stop hook, CI runs the web checks. It doesn't use nvm, so don't call `make node-check` there. Keep the golangci-lint version in the workflow in step with the one you use locally.
 
 ## Working modes
 

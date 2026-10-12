@@ -40,7 +40,7 @@ API_URL ?= http://localhost:8080
 # Files for web-fmt, relative to web/ or absolute; override with WEB_FILES="app/page.tsx".
 WEB_FILES ?= .
 
-.PHONY: sqlc sqlc-check lint fmt fmt-check test hooks migrate migrate-down migrate-status migrate-new up down restart seed import api node-check \
+.PHONY: sqlc sqlc-check lint fmt fmt-check test deps-check hooks migrate migrate-down migrate-status migrate-new up down restart seed import api node-check \
 	web-install web-deps web web-build web-lint web-typecheck web-fmt web-fmt-check web-test web-types web-types-check web-check \
 	chroma-css chroma-css-check
 
@@ -112,6 +112,11 @@ fmt-check:
 
 test:
 	$(GO) test -race ./...
+
+# Fails if go.mod/go.sum are not tidy or downloaded modules don't match go.sum.
+deps-check:
+	$(GO) mod tidy -diff
+	$(GO) mod verify
 
 # Fail unless node and npm resolve to the nvm install of the major in web/.nvmrc.
 node-check:

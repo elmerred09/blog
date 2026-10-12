@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Superseded PR runs are cancelled; every push to main gets a full run.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  GOLANGCI_LINT_VERSION: v2.14.0
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      # Built from source with the repo's Go: release binaries may be built with
+      # an older Go than go.mod targets, which golangci-lint refuses to lint.
+      - name: Install golangci-lint
+        run: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${GOLANGCI_LINT_VERSION}
+
+      - run: make fmt-check
+      - run: make lint
+      - run: make sqlc-check
+      - run: make chroma-css-check
+      - run: make deps-check
+
+      # Integration tests start Postgres through testcontainers; the runner has Docker.
+      - name: Pre-pull Postgres image
+        run: docker pull postgres:18
+      - run: make test
+
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: web/.nvmrc
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - run: make web-install
+      - run: make web-check
+      - run: make web-build
