@@ -1,7 +1,16 @@
 GO ?= $(shell command -v go || echo /usr/local/go/bin/go)
 GOROOT := $(shell $(GO) env GOROOT)
 GOPATH := $(shell $(GO) env GOPATH)
-export PATH := $(PATH):$(GOROOT)/bin:$(GOPATH)/bin
+
+# Node comes from nvm, at the major version in web/.nvmrc. nvm only loads in
+# interactive shells, so make (and the git and Cursor hooks that call it) put
+# the newest installed matching version first on PATH. Prepended, not appended,
+# so it wins over any Windows npm that WSL adds to PATH.
+NODE_MAJOR := $(shell cat web/.nvmrc 2>/dev/null)
+NVM_DIR ?= $(HOME)/.nvm
+NODE_BIN := $(shell ls -d $(NVM_DIR)/versions/node/v$(NODE_MAJOR).*/bin 2>/dev/null | sort -V | tail -n 1)
+
+export PATH := $(if $(NODE_BIN),$(NODE_BIN):)$(PATH):$(GOROOT)/bin:$(GOPATH)/bin
 
 SQLC := $(GO) tool sqlc
 LEFTHOOK := $(GO) tool lefthook
@@ -22,7 +31,7 @@ FILES ?= .
 # Paths for `make import`, e.g. POSTS="content/a.md content/".
 POSTS ?=
 
-.PHONY: sqlc sqlc-check lint fmt fmt-check test hooks migrate migrate-down migrate-status migrate-new up down restart seed import api
+.PHONY: sqlc sqlc-check lint fmt fmt-check test hooks migrate migrate-down migrate-status migrate-new up down restart seed import api node-check
 
 up:
 	docker compose up -d
@@ -84,6 +93,16 @@ fmt-check:
 
 test:
 	$(GO) test -race ./...
+
+# Fail unless node and npm resolve to the nvm install of the major in web/.nvmrc.
+node-check:
+	@if [ -z "$(NODE_BIN)" ]; then \
+		echo "no Node $(NODE_MAJOR).x under $(NVM_DIR); run: nvm install $(NODE_MAJOR)"; exit 1; \
+	fi
+	@if [ "$$(command -v node)" != "$(NODE_BIN)/node" ] || [ "$$(command -v npm)" != "$(NODE_BIN)/npm" ]; then \
+		echo "node/npm resolve to $$(command -v node) and $$(command -v npm), want $(NODE_BIN)"; exit 1; \
+	fi
+	@echo "node $$(node --version), npm $$(npm --version) from $(NODE_BIN)"
 
 # Install the git hooks defined in lefthook.yml (once per clone).
 hooks:
