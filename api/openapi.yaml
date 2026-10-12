@@ -1,0 +1,224 @@
+# The contract between the Go API and its clients. web/ generates its
+# TypeScript types from this file, and internal/httpapi's tests validate every
+# response they make against it.
+#
+# Every object sets additionalProperties: false and lists all its properties as
+# required, so a field added, renamed, or dropped in Go fails a test.
+openapi: 3.0.3
+info:
+  title: Blog API
+  version: 1.0.0
+
+servers:
+  - url: /
+    description: Relative to wherever the API is served.
+
+paths:
+  /livez:
+    get:
+      operationId: livez
+      summary: Liveness. The process is up; the database is not checked.
+      responses:
+        "200":
+          description: Serving.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+
+  /readyz:
+    get:
+      operationId: readyz
+      summary: Readiness. The database answers a ping within 2 seconds.
+      responses:
+        "200":
+          description: Ready to serve traffic.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+        "503":
+          description: The database is unreachable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+
+  /api/v1/posts:
+    get:
+      operationId: listPosts
+      summary: Published posts, newest first, with keyset pagination.
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+        - name: cursor
+          in: query
+          description: The previous page's next_cursor. Opaque; don't build or parse it.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: One page of posts.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Page"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Timeout"
+
+  /api/v1/posts/{slug}:
+    get:
+      operationId: getPost
+      summary: One published post. Drafts, scheduled, and deleted posts are 404.
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The post.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Timeout"
+
+components:
+  responses:
+    BadRequest:
+      description: A query parameter is invalid (code invalid_request).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: No such resource (code not_found). Unknown routes return the same body.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Internal:
+      description: An unexpected server error (code internal). The details are only in the server log.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Timeout:
+      description: The request ran out of time (code timeout).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  schemas:
+    Health:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok, unavailable]
+
+    Tag:
+      type: object
+      additionalProperties: false
+      required: [slug, name]
+      properties:
+        slug:
+          type: string
+        name:
+          type: string
+
+    PostListItem:
+      type: object
+      additionalProperties: false
+      required: [slug, title, summary, published_at, tags]
+      properties:
+        slug:
+          type: string
+        title:
+          type: string
+        summary:
+          type: string
+        published_at:
+          type: string
+          format: date-time
+        tags:
+          description: Sorted by slug. Empty, never null, for an untagged post.
+          type: array
+          items:
+            $ref: "#/components/schemas/Tag"
+
+    Post:
+      type: object
+      additionalProperties: false
+      required: [slug, title, summary, published_at, tags, body_html, updated_at]
+      properties:
+        slug:
+          type: string
+        title:
+          type: string
+        summary:
+          type: string
+        published_at:
+          type: string
+          format: date-time
+        tags:
+          description: Sorted by slug. Empty, never null, for an untagged post.
+          type: array
+          items:
+            $ref: "#/components/schemas/Tag"
+        body_html:
+          description: Rendered by the importer; raw HTML in the markdown source is escaped.
+          type: string
+        updated_at:
+          type: string
+          format: date-time
+
+    Page:
+      type: object
+      additionalProperties: false
+      required: [items, next_cursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PostListItem"
+        next_cursor:
+          description: Pass as ?cursor= for the next page. Null on the last page.
+          type: string
+          nullable: true
+
+    Error:
+      description: Returned with every 4xx and 5xx, including 404 for unknown routes and 405 for a known path with the wrong method.
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum: [invalid_request, not_found, method_not_allowed, internal, timeout]
+            message:
+              type: string

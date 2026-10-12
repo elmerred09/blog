@@ -101,7 +101,7 @@ func TestWrongMethodIsJSON405(t *testing.T) {
 			t.Parallel()
 			log, buf := testLogger()
 
-			rec := serve(New(Deps{Logger: log}), httptest.NewRequestWithContext(t.Context(), tc.method, tc.target, nil))
+			rec := serve(t, New(Deps{Logger: log}), httptest.NewRequestWithContext(t.Context(), tc.method, tc.target, nil))
 
 			wantError(t, rec, http.StatusMethodNotAllowed, codeMethodNotAllowed)
 			if allow := rec.Header().Get("Allow"); allow != http.MethodGet {
@@ -117,7 +117,7 @@ func TestWrongMethodIsJSON405(t *testing.T) {
 		t.Parallel()
 		log, _ := testLogger()
 		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/nope", nil)
-		wantError(t, serve(New(Deps{Logger: log}), req), http.StatusNotFound, codeNotFound)
+		wantError(t, serve(t, New(Deps{Logger: log}), req), http.StatusNotFound, codeNotFound)
 	})
 }
 
@@ -143,7 +143,7 @@ func TestRequestID(t *testing.T) {
 				req.Header.Set(requestIDHeader, tc.incoming)
 			}
 
-			rec := serve(New(Deps{Logger: log}), req)
+			rec := serve(t, New(Deps{Logger: log}), req)
 
 			got := rec.Header().Get(requestIDHeader)
 			if tc.keep {

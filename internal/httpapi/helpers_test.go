@@ -46,15 +46,18 @@ func requestLine(t *testing.T, buf *bytes.Buffer) map[string]any {
 	return found[0]
 }
 
-func serve(h http.Handler, req *http.Request) *httptest.ResponseRecorder {
+// serve runs req through h and checks the response against the OpenAPI spec.
+func serve(t *testing.T, h http.Handler, req *http.Request) *httptest.ResponseRecorder {
+	t.Helper()
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
+	checkContract(t, req, rec)
 	return rec
 }
 
 func get(t *testing.T, h http.Handler, target string) *httptest.ResponseRecorder {
 	t.Helper()
-	return serve(h, httptest.NewRequestWithContext(t.Context(), http.MethodGet, target, nil))
+	return serve(t, h, httptest.NewRequestWithContext(t.Context(), http.MethodGet, target, nil))
 }
 
 // decode unmarshals the response body into a T, failing on a non-JSON body.
