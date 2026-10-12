@@ -6,6 +6,18 @@ alwaysApply: false
 
 # Web (Next.js App Router)
 
+## Versions
+
+Next.js 16.4 and React 19.3, on Node 24 (`web/.nvmrc`). Tailwind CSS v4, configured in `app/globals.css` (`@import "tailwindcss"; @plugin "@tailwindcss/typography";`); there is no `tailwind.config.js`.
+
+This Next is newer than most training data. Before using an API you aren't sure of, read its page in `web/node_modules/next/dist/docs/` (see `web/AGENTS.md`, which `next dev` writes and keeps). Specifics that matter here:
+
+- `cacheComponents` and `partialPrefetching` are off in `next.config.ts`. Caching uses the fetch-level model (`next: { revalidate, tags }`), documented in `docs/01-app/02-guides/caching-without-cache-components.md`. Don't add `"use cache"`, `cacheLife`, or `cacheTag` unless that setting changes.
+- `fetch` is not cached unless you opt in with `next: { revalidate }`.
+- `params` and `searchParams` are Promises in pages and layouts: `const { cursor } = await searchParams`.
+- Turbopack is the bundler for dev and build; Tailwind runs as a Turbopack CSS loader (`@tailwindcss/turbopack`), not through PostCSS.
+- Formatting is Prettier with `prettier-plugin-tailwindcss` (class order); ESLint uses `eslint-config-next` with `eslint-config-prettier` last.
+
 - Server components by default. Add `"use client"` only for state, effects, or browser APIs, and keep those components small and at the leaves.
 - Fetch data in server components through the typed API client. Don't call `fetch` against the Go API ad hoc in components.
 - The API client lives in one place (e.g. `web/lib/api`), with types matching the Go JSON responses. Don't use `any`.
