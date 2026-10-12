@@ -9,8 +9,25 @@ pre-commit:
     sqlc-diff:
       glob: "{db/queries/*.sql,db/migrations/*.sql,internal/db/*}"
       run: make sqlc-check
+    web-lint:
+      glob: "web/*.{ts,tsx,js,mjs,cjs,json}"
+      run: make web-lint
+    web-typecheck:
+      glob: "web/*.{ts,tsx,mts,json}"
+      run: make web-typecheck
+    web-fmt-check:
+      glob: "web/*"
+      run: make web-fmt-check
+    web-types-check:
+      glob:
+        - "api/openapi.yaml"
+        - "web/lib/api/schema.d.ts"
+        - "web/package-lock.json"
+      run: make web-types-check
 
 pre-push:
   commands:
     test:
       run: make test
+    web-test:
+      run: make web-test

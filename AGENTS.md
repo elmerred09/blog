@@ -20,6 +20,7 @@ The goals include learning Postgres internals and search, so some work is delibe
 - `api/openapi.yaml` is the HTTP contract. Change it together with the handlers: `internal/httpapi` tests validate every response against it and fail if a route is missing from it.
 - `db/migrations/` holds goose migrations. `db/queries/` holds sqlc query files.
 - `content/` holds markdown posts with frontmatter (the authoring source of truth).
+- `web/` is the Next.js app. `web/lib/api/schema.d.ts` is **generated from `api/openapi.yaml` by `make web-types`. Never edit it.** `web/AGENTS.md` is written by `next dev`; read it before writing Next.js code.
 
 Not everything above exists yet. Check the tree before assuming a package is there.
 
@@ -41,8 +42,14 @@ Run everything through `make`; the Makefile sets up `PATH` for the Go tools.
 Both binaries require `DATABASE_URL`; the `make` targets set it to the compose database.
 
 - Node comes from nvm, at the major version in `web/.nvmrc`. The Makefile puts that install first on `PATH`, because nvm only loads in interactive shells. `make node-check` confirms `node` and `npm` resolve there.
+- `make web-install`: `npm ci` in `web/`. The other web targets fail with a reminder if `node_modules` is missing or older than `package-lock.json`.
+- `make web`: Next.js dev server, pointed at `make api` via `API_URL` (default `http://localhost:8080`). `make web-build`: production build.
+- `make web-lint` (ESLint), `make web-typecheck` (`tsc --noEmit`), `make web-test` (Vitest).
+- `make web-fmt` / `make web-fmt-check`: Prettier (`WEB_FILES="app/page.tsx"` to limit).
+- `make web-types` / `make web-types-check`: regenerate / verify the TypeScript API types from `api/openapi.yaml`.
+- `make web-check`: all the web checks above, in one target.
 
-Before finishing a change, `make lint` and `make test` should pass.
+Before finishing a change, `make lint` and `make test` should pass. For changes under `web/` or to `api/openapi.yaml`, `make web-check` should pass too.
 
 ## Conventions
 
@@ -55,9 +62,9 @@ Scoped rules live in `.cursor/rules/` (`go.mdc`, `sql.mdc`, `web.mdc`). Key poin
 
 ## Automation you should know about
 
-- After you edit a Go file, a hook runs `gofmt` on it. After edits under `db/queries` or `db/migrations`, it runs `make sqlc`.
-- When you stop, a hook runs `make lint` and asks you to continue if it reports issues.
-- Git hooks (lefthook) run lint (which includes the gofmt check) and `sqlc diff` on commit, and tests on push.
+- After you edit a Go file, a hook runs `gofmt` on it. After edits under `db/queries` or `db/migrations`, it runs `make sqlc`. After you edit a file under `web/`, it runs Prettier on it. After you edit `api/openapi.yaml`, it runs `make web-types`.
+- When you stop, a hook runs `make lint` and asks you to continue if it reports issues. It doesn't run the web checks.
+- Git hooks (lefthook) run lint (which includes the gofmt check) and `sqlc diff` on commit, and tests on push. For `web/` and `api/openapi.yaml`, they run the web lint, typecheck, Prettier check and API types check on commit (each only when matching files are staged), and `make web-test` on push.
 
 ## Working modes
 

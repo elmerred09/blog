@@ -31,7 +31,15 @@ FILES ?= .
 # Paths for `make import`, e.g. POSTS="content/a.md content/".
 POSTS ?=
 
-.PHONY: sqlc sqlc-check lint fmt fmt-check test hooks migrate migrate-down migrate-status migrate-new up down restart seed import api node-check
+WEB := web
+PRETTIER := ./node_modules/.bin/prettier
+# Go API base URL for `make web`; matches the API's default HTTP_ADDR.
+API_URL ?= http://localhost:8080
+# Files for web-fmt, relative to web/ or absolute; override with WEB_FILES="app/page.tsx".
+WEB_FILES ?= .
+
+.PHONY: sqlc sqlc-check lint fmt fmt-check test hooks migrate migrate-down migrate-status migrate-new up down restart seed import api node-check \
+	web-install web-deps web web-build web-lint web-typecheck web-fmt web-fmt-check web-test web-types web-types-check web-check
 
 up:
 	docker compose up -d
@@ -103,6 +111,47 @@ node-check:
 		echo "node/npm resolve to $$(command -v node) and $$(command -v npm), want $(NODE_BIN)"; exit 1; \
 	fi
 	@echo "node $$(node --version), npm $$(npm --version) from $(NODE_BIN)"
+
+web-install:
+	cd $(WEB) && npm ci
+
+# Fails instead of installing: lefthook runs several web targets in parallel,
+# and concurrent npm ci runs would clobber each other's node_modules.
+web-deps:
+	@if [ ! -f $(WEB)/node_modules/.package-lock.json ] || [ $(WEB)/package-lock.json -nt $(WEB)/node_modules/.package-lock.json ]; then \
+		echo "web/node_modules is missing or older than package-lock.json; run: make web-install"; exit 1; \
+	fi
+
+web: web-deps
+	cd $(WEB) && API_URL="$(API_URL)" npm run dev
+
+web-build: web-deps
+	cd $(WEB) && npm run build
+
+web-lint: web-deps
+	cd $(WEB) && npm run --silent lint
+
+web-typecheck: web-deps
+	cd $(WEB) && npm run --silent typecheck
+
+web-fmt: web-deps
+	cd $(WEB) && $(PRETTIER) --write --ignore-unknown --log-level warn $(WEB_FILES)
+
+web-fmt-check: web-deps
+	cd $(WEB) && npm run --silent format:check
+
+web-test: web-deps
+	cd $(WEB) && npm run --silent test
+
+# TypeScript types for the HTTP API, generated from api/openapi.yaml.
+web-types: web-deps
+	cd $(WEB) && npm run --silent types
+
+web-types-check: web-deps
+	cd $(WEB) && npm run --silent types:check
+
+# Everything the commit and push hooks run for web/, in one target (for CI).
+web-check: web-lint web-typecheck web-fmt-check web-types-check web-test
 
 # Install the git hooks defined in lefthook.yml (once per clone).
 hooks:
