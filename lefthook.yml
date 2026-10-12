@@ -9,6 +9,13 @@ pre-commit:
     sqlc-diff:
       glob: "{db/queries/*.sql,db/migrations/*.sql,internal/db/*}"
       run: make sqlc-check
+    chroma-css-check:
+      glob:
+        - "go.mod"
+        - "internal/content/*.go"
+        - "cmd/blogctl/*.go"
+        - "web/app/chroma.css"
+      run: make chroma-css-check
     web-lint:
       glob: "web/*.{ts,tsx,js,mjs,cjs,json}"
       run: make web-lint

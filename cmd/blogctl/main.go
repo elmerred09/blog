@@ -22,11 +22,13 @@ func main() {
 
 func run(ctx context.Context, args []string, stdout io.Writer) error {
 	if len(args) == 0 {
-		return errors.New("usage: blogctl import PATH [PATH...]")
+		return errors.New("usage: blogctl import PATH [PATH...] | blogctl css")
 	}
 	switch args[0] {
 	case "import":
 		return runImport(ctx, args[1:], stdout)
+	case "css":
+		return runCSS(args[1:], stdout)
 	default:
 		return fmt.Errorf("unknown command %q", args[0])
 	}

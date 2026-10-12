@@ -78,3 +78,35 @@ func TestRender(t *testing.T) {
 		})
 	}
 }
+
+func TestWriteCSS(t *testing.T) {
+	t.Parallel()
+
+	var buf strings.Builder
+	if err := content.WriteCSS(&buf); err != nil {
+		t.Fatalf("WriteCSS: %v", err)
+	}
+	css := buf.String()
+
+	light, dark, ok := strings.Cut(css, "@media (prefers-color-scheme: dark) {")
+	if !ok {
+		t.Fatalf("no dark-mode block:\n%s", css)
+	}
+	if !strings.HasSuffix(dark, "}\n") {
+		t.Errorf("dark-mode block not closed:\n%s", dark)
+	}
+
+	// Selectors for what Render emits: <pre class="chroma"> and, for Go's
+	// func, <span class="kd">.
+	for _, sel := range []string{".chroma {", ".chroma .kd {"} {
+		if !strings.Contains(light, sel) {
+			t.Errorf("light theme has no %q rule", sel)
+		}
+		if !strings.Contains(dark, sel) {
+			t.Errorf("dark theme has no %q rule", sel)
+		}
+	}
+	if light == dark {
+		t.Error("light and dark themes are identical")
+	}
+}

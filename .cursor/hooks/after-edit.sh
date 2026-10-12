@@ -9,7 +9,7 @@ file=$(printf '%s' "$input" | sed -n 's/.*"file_path"[[:space:]]*:[[:space:]]*"\
 [ -z "$file" ] && exit 0
 
 case "$file" in
-  */internal/db/* | */web/lib/api/schema.d.ts | */web/node_modules/* | */web/.next/*)
+  */internal/db/* | */web/lib/api/schema.d.ts | */web/app/chroma.css | */web/node_modules/* | */web/.next/*)
     # Generated code, never touch it.
     ;;
   *.go)
