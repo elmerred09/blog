@@ -2,5 +2,6 @@
 node_modules/
 package-lock.json
 next-env.d.ts
+lib/api/schema.d.ts
 # Written by next dev; it re-adds its own formatting.
 AGENTS.md
