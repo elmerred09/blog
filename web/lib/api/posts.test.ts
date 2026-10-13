@@ -92,7 +92,13 @@ describe("listPosts", () => {
 
     const result = await listPosts();
 
-    expect(result.next_cursor).toBeNull();
+    expect(result?.next_cursor).toBeNull();
+  });
+
+  it("returns null when the API rejects the query", async () => {
+    stubFetch(apiError(400, "invalid_request", "invalid cursor"));
+
+    await expect(listPosts({ cursor: "bad" })).resolves.toBeNull();
   });
 
   it("is cached for minutes under the posts tag", async () => {
@@ -144,12 +150,6 @@ describe("getPost", () => {
 
 describe("error responses", () => {
   it.each([
-    {
-      name: "listPosts 400",
-      call: () => listPosts({ cursor: "bad" }),
-      response: apiError(400, "invalid_request", "invalid cursor"),
-      want: { status: 400, code: "invalid_request", message: "invalid cursor" },
-    },
     {
       name: "listPosts 500",
       call: () => listPosts(),
