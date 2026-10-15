@@ -15,7 +15,7 @@ import (
 const deleteTagsForPostExcept = `-- name: DeleteTagsForPostExcept :execrows
 DELETE FROM post_tags
 WHERE post_id = $1
-  AND NOT (tag_id = ANY(coalesce($2::int[], '{}')))
+  AND NOT (tag_id = ANY(COALESCE($2::int[], '{}')))
 `
 
 type DeleteTagsForPostExceptParams struct {
@@ -76,8 +76,8 @@ WHERE pt.tag_id = $1
   AND p.published_at <= CURRENT_TIMESTAMP
   AND p.deleted_at IS NULL
   AND (p.published_at, p.id) < (
-    coalesce($2::timestamptz, 'infinity'),
-    coalesce($3::uuid, 'ffffffff-ffff-ffff-ffff-ffffffffffff')
+    COALESCE($2::timestamptz, 'infinity'),
+    COALESCE($3::uuid, 'ffffffff-ffff-ffff-ffff-ffffffffffff')
   )
 ORDER BY p.published_at DESC, p.id DESC
 LIMIT $4

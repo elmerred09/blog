@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -58,33 +59,16 @@ func (s *Service) List(ctx context.Context, p ListParams) (Page, error) {
 		rows = rows[:p.Limit]
 	}
 
-	ids := make([]uuid.UUID, len(rows))
+	itemRows := make([]Row, len(rows))
 	for i, r := range rows {
-		ids[i] = r.ID
+		itemRows[i] = Row(r)
 	}
-	tagsByPost, err := s.tagsFor(ctx, ids)
+	items, err := ListItems(ctx, s.q, itemRows)
 	if err != nil {
-		return Page{}, err
+		return Page{}, fmt.Errorf("list posts: %w", err)
 	}
 
-	page := Page{Items: make([]ListItem, len(rows))}
-	for i, r := range rows {
-		if r.PublishedAt == nil {
-			return Page{}, fmt.Errorf("list posts: post %s has no published_at", r.ID)
-		}
-		tags := tagsByPost[r.ID]
-		if tags == nil {
-			tags = []Tag{}
-		}
-		page.Items[i] = ListItem{
-			Slug:        r.Slug,
-			Title:       r.Title,
-			Summary:     r.Summary,
-			PublishedAt: *r.PublishedAt,
-			Tags:        tags,
-		}
-	}
-
+	page := Page{Items: items}
 	if hasMore {
 		last := rows[len(rows)-1]
 		page.Next = &Cursor{PublishedAt: *last.PublishedAt, ID: last.ID}
@@ -92,13 +76,55 @@ func (s *Service) List(ctx context.Context, p ListParams) (Page, error) {
 	return page, nil
 }
 
+// Row is the columns a list-style query (ListPosts, SearchPosts) selects for
+// each post.
+type Row struct {
+	ID          uuid.UUID
+	Slug        string
+	Title       string
+	Summary     string
+	PublishedAt *time.Time
+}
+
+// ListItems turns rows into ListItems in the same order, with each post's tags
+// from one query. Every row must be published.
+func ListItems(ctx context.Context, q *db.Queries, rows []Row) ([]ListItem, error) {
+	ids := make([]uuid.UUID, len(rows))
+	for i, r := range rows {
+		ids[i] = r.ID
+	}
+	tagsByPost, err := tagsFor(ctx, q, ids)
+	if err != nil {
+		return nil, err
+	}
+
+	items := make([]ListItem, len(rows))
+	for i, r := range rows {
+		if r.PublishedAt == nil {
+			return nil, fmt.Errorf("post %s has no published_at", r.ID)
+		}
+		tags := tagsByPost[r.ID]
+		if tags == nil {
+			tags = []Tag{}
+		}
+		items[i] = ListItem{
+			Slug:        r.Slug,
+			Title:       r.Title,
+			Summary:     r.Summary,
+			PublishedAt: *r.PublishedAt,
+			Tags:        tags,
+		}
+	}
+	return items, nil
+}
+
 // tagsFor returns each post's tags, sorted by slug. Posts without tags are
 // absent from the map.
-func (s *Service) tagsFor(ctx context.Context, postIDs []uuid.UUID) (map[uuid.UUID][]Tag, error) {
+func tagsFor(ctx context.Context, q *db.Queries, postIDs []uuid.UUID) (map[uuid.UUID][]Tag, error) {
 	if len(postIDs) == 0 {
 		return nil, nil
 	}
-	rows, err := s.q.ListTagsForPosts(ctx, postIDs)
+	rows, err := q.ListTagsForPosts(ctx, postIDs)
 	if err != nil {
 		return nil, fmt.Errorf("list tags for posts: %w", err)
 	}

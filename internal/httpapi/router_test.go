@@ -220,6 +220,12 @@ func TestRequestTimeout(t *testing.T) {
 		t.Fatalf("new pool: %v", err)
 	}
 	t.Cleanup(pool.Close)
+	// Connect before the timed request. On a slow runner, dialing and auth can
+	// outlast the 100ms deadline, and the request then fails in pool acquire
+	// with a bare context error before the query reaches Postgres.
+	if err := pool.Ping(t.Context()); err != nil {
+		t.Fatalf("ping: %v", err)
+	}
 	log, buf := testLogger()
 	r := newEngine(Deps{Logger: log, DB: pool, RequestTimeout: 100 * time.Millisecond})
 	r.GET("/slow", func(c *gin.Context) {

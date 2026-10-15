@@ -34,7 +34,7 @@ ORDER BY t.slug ASC;
 -- so treat it as empty: no tags means remove every link.
 DELETE FROM post_tags
 WHERE post_id = sqlc.arg(post_id)
-  AND NOT (tag_id = ANY(coalesce(sqlc.arg(tag_ids)::int[], '{}')));
+  AND NOT (tag_id = ANY(COALESCE(sqlc.arg(tag_ids)::int[], '{}')));
 
 -- name: SetTagsForPost :execrows
 -- index: post_tags_pkey (post_id, tag_id).
@@ -51,8 +51,8 @@ WHERE pt.tag_id = sqlc.arg(tag_id)
   AND p.published_at <= CURRENT_TIMESTAMP
   AND p.deleted_at IS NULL
   AND (p.published_at, p.id) < (
-    coalesce(sqlc.narg(after_published_at)::timestamptz, 'infinity'),
-    coalesce(sqlc.narg(after_id)::uuid, 'ffffffff-ffff-ffff-ffff-ffffffffffff')
+    COALESCE(sqlc.narg(after_published_at)::timestamptz, 'infinity'),
+    COALESCE(sqlc.narg(after_id)::uuid, 'ffffffff-ffff-ffff-ffff-ffffffffffff')
   )
 ORDER BY p.published_at DESC, p.id DESC
 LIMIT sqlc.arg(page_size);

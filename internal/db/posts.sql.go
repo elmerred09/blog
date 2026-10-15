@@ -72,8 +72,8 @@ FROM posts
 WHERE published_at <= CURRENT_TIMESTAMP
   AND deleted_at IS NULL
   AND (published_at, id) < (
-    coalesce($1::timestamptz, 'infinity'),
-    coalesce($2::uuid, 'ffffffff-ffff-ffff-ffff-ffffffffffff')
+    COALESCE($1::timestamptz, 'infinity'),
+    COALESCE($2::uuid, 'ffffffff-ffff-ffff-ffff-ffffffffffff')
   )
 ORDER BY published_at DESC, id DESC
 LIMIT $3

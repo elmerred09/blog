@@ -49,8 +49,8 @@ FROM posts
 WHERE published_at <= CURRENT_TIMESTAMP
   AND deleted_at IS NULL
   AND (published_at, id) < (
-    coalesce(sqlc.narg(after_published_at)::timestamptz, 'infinity'),
-    coalesce(sqlc.narg(after_id)::uuid, 'ffffffff-ffff-ffff-ffff-ffffffffffff')
+    COALESCE(sqlc.narg(after_published_at)::timestamptz, 'infinity'),
+    COALESCE(sqlc.narg(after_id)::uuid, 'ffffffff-ffff-ffff-ffff-ffffffffffff')
   )
 ORDER BY published_at DESC, id DESC
 LIMIT sqlc.arg(page_size);

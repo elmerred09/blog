@@ -30,6 +30,8 @@ type PostOption func(*postSpec)
 type postSpec struct {
 	slug    string
 	title   string
+	summary *string
+	body    *string
 	exactAt *time.Time     // published_at = exactAt
 	offset  *time.Duration // published_at = now() + offset
 	deleted bool
@@ -44,6 +46,17 @@ func WithSlug(slug string) PostOption {
 // WithTitle sets the title. The default is derived from the slug.
 func WithTitle(title string) PostOption {
 	return func(s *postSpec) { s.title = title }
+}
+
+// WithSummary sets the summary. The default is derived from the slug.
+func WithSummary(summary string) PostOption {
+	return func(s *postSpec) { s.summary = &summary }
+}
+
+// WithBody sets body_md, the text search indexes. body_html is left as the
+// default, since nothing reads both.
+func WithBody(markdown string) PostOption {
+	return func(s *postSpec) { s.body = &markdown }
 }
 
 // PublishedAgo publishes the post at now() - ago. The default is one hour ago.
@@ -107,14 +120,14 @@ func InsertPost(t testing.TB, conn db.DBTX, opts ...PostOption) Post {
 	const q = `
 INSERT INTO posts (slug, title, summary, body_md, body_html, published_at, deleted_at)
 VALUES (
-    $1, $2, 'Summary of ' || $1, '# ' || $2, '<h1>' || $2 || '</h1>',
+    $1, $2, coalesce($6, 'Summary of ' || $1), coalesce($7, '# ' || $2), '<h1>' || $2 || '</h1>',
     coalesce($3::timestamptz, now() + $4::float8 * interval '1 second'),
     CASE WHEN $5::bool THEN now() END
 )
 RETURNING id, slug, published_at`
 
 	var p Post
-	err := conn.QueryRow(t.Context(), q, spec.slug, spec.title, spec.exactAt, offsetSecs, spec.deleted).
+	err := conn.QueryRow(t.Context(), q, spec.slug, spec.title, spec.exactAt, offsetSecs, spec.deleted, spec.summary, spec.body).
 		Scan(&p.ID, &p.Slug, &p.PublishedAt)
 	if err != nil {
 		t.Fatalf("insert post %q: %v", spec.slug, err)

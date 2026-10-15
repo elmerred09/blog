@@ -18,6 +18,7 @@ import (
 	"github.com/elmerred09/blog/internal/httpapi"
 	"github.com/elmerred09/blog/internal/platform/db/pgconfig"
 	"github.com/elmerred09/blog/internal/post"
+	"github.com/elmerred09/blog/internal/search"
 )
 
 const (
@@ -75,6 +76,7 @@ func run(ctx context.Context, stopSignals func(), log *slog.Logger) error {
 			Logger:         log,
 			DB:             pool,
 			Posts:          post.NewService(pool),
+			Search:         search.NewPostgres(pool),
 			RequestTimeout: requestTimeout,
 		}),
 		ReadHeaderTimeout: readHeaderTimeout,

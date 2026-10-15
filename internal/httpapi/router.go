@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/elmerred09/blog/internal/post"
+	"github.com/elmerred09/blog/internal/search"
 )
 
 const DefaultRequestTimeout = 10 * time.Second
@@ -16,6 +17,7 @@ type Deps struct {
 	Logger *slog.Logger
 	DB     Pinger
 	Posts  *post.Service
+	Search search.Searcher
 	// RequestTimeout bounds each request's context. Keep it below the
 	// server's WriteTimeout, or the timeout response can't be written.
 	RequestTimeout time.Duration
@@ -45,6 +47,7 @@ func newEngine(d Deps) *gin.Engine {
 	v1 := r.Group("/api/v1")
 	v1.GET("/posts", listPosts(d.Posts))
 	v1.GET("/posts/:slug", getPost(d.Posts))
+	v1.GET("/search", searchPosts(d.Search))
 
 	r.NoRoute(func(c *gin.Context) {
 		writeError(c, http.StatusNotFound, codeNotFound, "route not found")

@@ -99,6 +99,38 @@ paths:
         "503":
           $ref: "#/components/responses/Timeout"
 
+  /api/v1/search:
+    get:
+      operationId: searchPosts
+      summary: Published posts matching a full-text query, best match first. No pagination.
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: The user's search text, 1 to 200 characters once trimmed.
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        "200":
+          description: The matching posts. Empty items when nothing matches.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResults"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Timeout"
+
 components:
   responses:
     BadRequest:
@@ -205,6 +237,53 @@ components:
           description: Pass as ?cursor= for the next page. Null on the last page.
           type: string
           nullable: true
+
+    SnippetFragment:
+      description: Plain text, not HTML. Clients escape it, and highlight fragments where match is true.
+      type: object
+      additionalProperties: false
+      required: [text, match]
+      properties:
+        text:
+          type: string
+        match:
+          type: boolean
+
+    SearchResult:
+      description: A PostListItem plus a snippet. The fields are repeated rather than built with allOf, because in OpenAPI 3.0 additionalProperties false applies to each allOf branch separately.
+      type: object
+      additionalProperties: false
+      required: [slug, title, summary, published_at, tags, snippet]
+      properties:
+        slug:
+          type: string
+        title:
+          type: string
+        summary:
+          type: string
+        published_at:
+          type: string
+          format: date-time
+        tags:
+          description: Sorted by slug. Empty, never null, for an untagged post.
+          type: array
+          items:
+            $ref: "#/components/schemas/Tag"
+        snippet:
+          description: An excerpt of the body around the matches, in order. Empty when there's nothing to excerpt.
+          type: array
+          items:
+            $ref: "#/components/schemas/SnippetFragment"
+
+    SearchResults:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SearchResult"
 
     Error:
       description: Returned with every 4xx and 5xx, including 404 for unknown routes and 405 for a known path with the wrong method.
