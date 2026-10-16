@@ -1,4 +1,5 @@
-package content
+// Package slug makes and checks the URL slugs used for posts and tags.
+package slug
 
 import (
 	"fmt"
@@ -11,11 +12,11 @@ import (
 
 var slugPattern = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
 
-// Slugify turns a display name into a slug: lowercase ASCII letters and
+// Make turns a display name into a slug: lowercase ASCII letters and
 // digits, with each run of anything else collapsed to a single dash and none
 // at either end. Accents are folded ("Café" becomes "cafe"). It returns an
 // error if nothing usable is left.
-func Slugify(name string) (string, error) {
+func Make(name string) (string, error) {
 	var slug strings.Builder
 	pendingDash := false
 
@@ -40,8 +41,8 @@ func Slugify(name string) (string, error) {
 	return slug.String(), nil
 }
 
-// ValidSlug reports whether s is already a well-formed slug.
-func ValidSlug(s string) bool {
+// Valid reports whether s is already a well-formed slug.
+func Valid(s string) bool {
 	return slugPattern.MatchString(s)
 }
 

@@ -10,6 +10,9 @@ import (
 	"time"
 
 	"go.yaml.in/yaml/v3"
+
+	"github.com/elmerred09/blog/internal/slug"
+	"github.com/elmerred09/blog/internal/tags"
 )
 
 type frontmatter struct {
@@ -79,8 +82,10 @@ func (meta frontmatter) toSource(name string, body []byte) (Source, error) {
 		errs = append(errs, err)
 	}
 
-	tags, tagErrs := resolveTags(meta.Tags)
-	errs = append(errs, tagErrs...)
+	postTags, err := tags.FromNames(meta.Tags)
+	if err != nil {
+		errs = append(errs, err)
+	}
 
 	if len(errs) > 0 {
 		return Source{}, errors.Join(errs...)
@@ -91,7 +96,7 @@ func (meta frontmatter) toSource(name string, body []byte) (Source, error) {
 		Title:       meta.Title,
 		Summary:     meta.Summary,
 		PublishedAt: meta.PublishedAt,
-		Tags:        tags,
+		Tags:        postTags,
 		BodyMD:      string(body),
 	}, nil
 }
@@ -100,40 +105,16 @@ func (meta frontmatter) toSource(name string, body []byte) (Source, error) {
 // from the file name.
 func resolveSlug(name, explicit string) (string, error) {
 	if explicit != "" {
-		if !ValidSlug(explicit) {
+		if !slug.Valid(explicit) {
 			return "", fmt.Errorf("slug %q must be lowercase letters, digits, and single dashes", explicit)
 		}
 		return explicit, nil
 	}
 
 	stem := strings.TrimSuffix(path.Base(name), path.Ext(name))
-	slug, err := Slugify(stem)
+	s, err := slug.Make(stem)
 	if err != nil {
 		return "", fmt.Errorf("slug from file name: %w", err)
 	}
-	return slug, nil
-}
-
-// resolveTags slugifies tag names, keeping file order. Names that share a
-// slug collapse to the first one.
-func resolveTags(names []string) ([]Tag, []error) {
-	var (
-		tags []Tag
-		errs []error
-		seen = make(map[string]bool, len(names))
-	)
-	for _, name := range names {
-		name = strings.TrimSpace(name)
-		slug, err := Slugify(name)
-		if err != nil {
-			errs = append(errs, fmt.Errorf("tag: %w", err))
-			continue
-		}
-		if seen[slug] {
-			continue
-		}
-		seen[slug] = true
-		tags = append(tags, Tag{Slug: slug, Name: name})
-	}
-	return tags, errs
+	return s, nil
 }

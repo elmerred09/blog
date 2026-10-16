@@ -16,16 +16,18 @@ linters:
   settings:
     depguard:
       rules:
-        # The API serves stored HTML; it must not link the markdown, chroma,
-        # and YAML libraries that internal/content pulls in.
-        read-side:
+        # internal/content is markdown-file ingestion (frontmatter, YAML,
+        # the import transaction) for blogctl. Rendering, slugs, and tag
+        # writes live in internal/render, internal/slug, and internal/tags,
+        # which the API may use.
+        content-is-blogctl-only:
           files:
-            - "**/cmd/api/**"
-            - "**/internal/httpapi/**"
-            - "**/internal/post/**"
+            - "$all"
+            - "!**/cmd/blogctl/**"
+            - "!**/internal/content/**"
           deny:
             - pkg: github.com/elmerred09/blog/internal/content
-              desc: ingestion is blogctl-only; the API reads posts through internal/post
+              desc: ingestion is blogctl-only; use internal/render, internal/slug, or internal/tags
 
 formatters:
   enable:

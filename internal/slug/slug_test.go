@@ -1,12 +1,12 @@
-package content_test
+package slug_test
 
 import (
 	"testing"
 
-	"github.com/elmerred09/blog/internal/content"
+	"github.com/elmerred09/blog/internal/slug"
 )
 
-func TestSlugify(t *testing.T) {
+func TestMake(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -29,34 +29,34 @@ func TestSlugify(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			got, err := content.Slugify(tc.in)
+			got, err := slug.Make(tc.in)
 			if err != nil {
-				t.Fatalf("Slugify(%q): %v", tc.in, err)
+				t.Fatalf("Make(%q): %v", tc.in, err)
 			}
 			if got != tc.want {
-				t.Errorf("Slugify(%q) = %q, want %q", tc.in, got, tc.want)
+				t.Errorf("Make(%q) = %q, want %q", tc.in, got, tc.want)
 			}
-			if !content.ValidSlug(got) {
-				t.Errorf("Slugify(%q) = %q, which ValidSlug rejects", tc.in, got)
+			if !slug.Valid(got) {
+				t.Errorf("Make(%q) = %q, which Valid rejects", tc.in, got)
 			}
 		})
 	}
 }
 
-func TestSlugifyRejectsEmptyResult(t *testing.T) {
+func TestMakeRejectsEmptyResult(t *testing.T) {
 	t.Parallel()
 
 	for _, in := range []string{"", "   ", "!!!", "---", "日本語"} {
 		t.Run(in, func(t *testing.T) {
 			t.Parallel()
-			if got, err := content.Slugify(in); err == nil {
-				t.Errorf("Slugify(%q) = %q, want an error (nothing slug-worthy left)", in, got)
+			if got, err := slug.Make(in); err == nil {
+				t.Errorf("Make(%q) = %q, want an error (nothing slug-worthy left)", in, got)
 			}
 		})
 	}
 }
 
-func TestValidSlug(t *testing.T) {
+func TestValid(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -79,8 +79,8 @@ func TestValidSlug(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.in, func(t *testing.T) {
 			t.Parallel()
-			if got := content.ValidSlug(tc.in); got != tc.want {
-				t.Errorf("ValidSlug(%q) = %v, want %v", tc.in, got, tc.want)
+			if got := slug.Valid(tc.in); got != tc.want {
+				t.Errorf("Valid(%q) = %v, want %v", tc.in, got, tc.want)
 			}
 		})
 	}

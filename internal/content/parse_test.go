@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/elmerred09/blog/internal/content"
+	"github.com/elmerred09/blog/internal/tags"
 )
 
 func TestParse(t *testing.T) {
@@ -23,7 +24,7 @@ func TestParse(t *testing.T) {
 		wantTitle     string
 		wantSummary   string
 		wantPublished *time.Time // nil means draft
-		wantTags      []content.Tag
+		wantTags      []tags.Tag
 		wantBody      string
 	}{
 		{
@@ -42,7 +43,7 @@ tags: [Postgres, Performance]
 			wantTitle:     "Keyset pagination",
 			wantSummary:   "Why OFFSET gets slow.",
 			wantPublished: new(time.Date(2026, 10, 1, 9, 0, 0, 0, eastern)),
-			wantTags:      []content.Tag{{Slug: "postgres", Name: "Postgres"}, {Slug: "performance", Name: "Performance"}},
+			wantTags:      []tags.Tag{{Slug: "postgres", Name: "Postgres"}, {Slug: "performance", Name: "Performance"}},
 			wantBody:      "# Hello\n",
 		},
 		{
@@ -70,7 +71,7 @@ tags: [Postgres, Performance]
 			path:     "a.md",
 			src:      "---\ntitle: T\nsummary: S\ntags: [Postgres, postgres, Go, POSTGRES]\n---\n",
 			wantSlug: "a",
-			wantTags: []content.Tag{{Slug: "postgres", Name: "Postgres"}, {Slug: "go", Name: "Go"}},
+			wantTags: []tags.Tag{{Slug: "postgres", Name: "Postgres"}, {Slug: "go", Name: "Go"}},
 		},
 		{
 			name:     "CRLF line endings",

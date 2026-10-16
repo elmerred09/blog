@@ -13,6 +13,7 @@ import (
 
 	"github.com/elmerred09/blog/internal/content"
 	"github.com/elmerred09/blog/internal/platform/db/dbtest"
+	"github.com/elmerred09/blog/internal/render"
 )
 
 func mdFile(frontmatter, body string) *fstest.MapFile {
@@ -41,7 +42,7 @@ func newImporterDB(t *testing.T) importerDB {
 	pool, _ := env.NewDB(t)
 	return importerDB{
 		pool: pool,
-		im:   content.NewImporter(pool, content.NewRenderer()),
+		im:   content.NewImporter(pool, render.New()),
 	}
 }
 

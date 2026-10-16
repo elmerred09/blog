@@ -34,8 +34,9 @@ if err != nil {
 
 - No global mutable state or `init()` side effects. Pass dependencies explicitly (constructors).
 - Keep interfaces small and define them consumer-side by default (e.g. the post repository). Provider-side is intended only when there are multiple implementations, like `search.Searcher` (Postgres now, Elasticsearch later); don't move it.
-- Group packages by domain (`content`, `post`, `search`), not by layer.
-- `internal/content` (markdown parsing, rendering, import) is for `cmd/blogctl` only. The API reads through `internal/post` and must not import `content`, or it links goldmark, chroma, and yaml for nothing.
+- Group packages by domain (`content`, `post`, `search`, `tags`), not by layer.
+- `internal/content` (markdown-file parsing and the import) is for `cmd/blogctl` only; depguard enforces it. Code the API also needs lives in shared packages: `internal/render` (markdown to HTML), `internal/slug`, and `internal/tags` (tag writes).
+- `internal/post` is the read side. Writes go elsewhere (`tags` today, the admin service next), so the public API's package stays read-only.
 - Use `log/slog` for logging, with structured key/value attrs.
 
 ## HTTP (gin)

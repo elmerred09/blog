@@ -10,6 +10,8 @@ import (
 	"slices"
 
 	"github.com/elmerred09/blog/internal/db"
+	"github.com/elmerred09/blog/internal/render"
+	"github.com/elmerred09/blog/internal/tags"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -17,7 +19,7 @@ import (
 
 type Importer struct {
 	pool   *pgxpool.Pool
-	render *Renderer
+	render *render.Renderer
 }
 
 // Outcome is what an import did to a post's row. Tag link changes are counted
@@ -54,8 +56,8 @@ func (s Summary) Count(o Outcome) int {
 	return n
 }
 
-func NewImporter(pool *pgxpool.Pool, render *Renderer) *Importer {
-	return &Importer{pool: pool, render: render}
+func NewImporter(pool *pgxpool.Pool, r *render.Renderer) *Importer {
+	return &Importer{pool: pool, render: r}
 }
 
 // Import upserts the markdown files named by paths (files or directories
@@ -88,7 +90,7 @@ func (im *Importer) Import(ctx context.Context, fsys fs.FS, paths []string) (Sum
 	if err != nil {
 		return Summary{}, err
 	}
-	tagIDs, created, err := upsertTags(ctx, q, sources)
+	tagIDs, created, err := ensureTags(ctx, q, sources)
 	if err != nil {
 		return Summary{}, err
 	}
@@ -142,38 +144,15 @@ func upsertPosts(ctx context.Context, q *db.Queries, sources []Source, html []st
 	return files, postIDs, nil
 }
 
-// upsertTags creates any missing tags used by sources and returns every tag
+// ensureTags creates any missing tags used by sources and returns every tag
 // id by slug, plus how many tags were created. A new tag is named by the
 // first source (in path order) that uses it; existing tags keep their name.
-func upsertTags(ctx context.Context, q *db.Queries, sources []Source) (map[string]int32, int, error) {
-	tagsBySlug := make(map[string]Tag)
+func ensureTags(ctx context.Context, q *db.Queries, sources []Source) (map[string]int32, int, error) {
+	var all []tags.Tag
 	for _, source := range sources {
-		for _, tag := range source.Tags {
-			if _, ok := tagsBySlug[tag.Slug]; !ok {
-				tagsBySlug[tag.Slug] = tag
-			}
-		}
+		all = append(all, source.Tags...)
 	}
-
-	slugs := slices.Sorted(maps.Keys(tagsBySlug))
-	created := 0
-	for _, slug := range slugs {
-		n, err := q.UpsertTag(ctx, db.UpsertTagParams{Slug: slug, Name: tagsBySlug[slug].Name})
-		if err != nil {
-			return nil, 0, fmt.Errorf("upsert tag %q: %w", slug, err)
-		}
-		created += int(n)
-	}
-
-	rows, err := q.GetTagsBySlugs(ctx, slugs)
-	if err != nil {
-		return nil, 0, fmt.Errorf("get tags by slugs: %w", err)
-	}
-	tagIDs := make(map[string]int32, len(rows))
-	for _, row := range rows {
-		tagIDs[row.Slug] = row.ID
-	}
-	return tagIDs, created, nil
+	return tags.Ensure(ctx, q, all)
 }
 
 // syncLinks makes each post's tag links match its source, touching only the
@@ -181,8 +160,6 @@ func upsertTags(ctx context.Context, q *db.Queries, sources []Source) (map[strin
 func syncLinks(ctx context.Context, q *db.Queries, sources []Source, postIDs map[string]uuid.UUID, tagIDs map[string]int32) (int, int, error) {
 	var added, removed int
 	for _, source := range sources {
-		postID := postIDs[source.Slug]
-
 		ids := make([]int32, 0, len(source.Tags))
 		for _, tag := range source.Tags {
 			id, ok := tagIDs[tag.Slug]
@@ -192,17 +169,12 @@ func syncLinks(ctx context.Context, q *db.Queries, sources []Source, postIDs map
 			ids = append(ids, id)
 		}
 
-		n, err := q.DeleteTagsForPostExcept(ctx, db.DeleteTagsForPostExceptParams{PostID: postID, TagIds: ids})
+		a, r, err := tags.Link(ctx, q, postIDs[source.Slug], ids)
 		if err != nil {
-			return 0, 0, fmt.Errorf("delete stale tags for post %q: %w", source.Slug, err)
+			return 0, 0, fmt.Errorf("post %q: %w", source.Slug, err)
 		}
-		removed += int(n)
-
-		n, err = q.SetTagsForPost(ctx, db.SetTagsForPostParams{PostID: postID, TagIds: ids})
-		if err != nil {
-			return 0, 0, fmt.Errorf("add tags for post %q: %w", source.Slug, err)
-		}
-		added += int(n)
+		added += a
+		removed += r
 	}
 	return added, removed, nil
 }

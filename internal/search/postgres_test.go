@@ -101,9 +101,13 @@ func TestSearchTiesAreNewestFirst(t *testing.T) {
 
 	now := dbtest.Now(t, pool).Truncate(time.Microsecond)
 	var posts []dbtest.Post
+	// The default summary contains the random slug, whose lexeme count varies
+	// (an all-digit suffix parses differently), and rank divides by document
+	// length. A fixed summary keeps the documents, and so the ranks, identical.
 	insert := func(at time.Time) {
 		posts = append(posts, dbtest.InsertPost(t, pool, dbtest.WithTitle("Same"),
-			dbtest.WithBody("Identical body about otters."), dbtest.PublishedAt(at)))
+			dbtest.WithSummary("Same summary."), dbtest.WithBody("Identical body about otters."),
+			dbtest.PublishedAt(at)))
 	}
 	insert(now.Add(-3 * time.Hour))
 	insert(now.Add(-1 * time.Hour))

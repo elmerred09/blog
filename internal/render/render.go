@@ -1,4 +1,6 @@
-package content
+// Package render turns post markdown into HTML and writes the matching
+// highlighting stylesheet.
+package render
 
 import (
 	"bytes"
@@ -23,7 +25,7 @@ const (
 
 type Renderer struct{ md goldmark.Markdown }
 
-func NewRenderer() *Renderer {
+func New() *Renderer {
 	return &Renderer{md: goldmark.New(
 		goldmark.WithExtensions(
 			extension.GFM, // tables, strikethrough, autolinks, task lists

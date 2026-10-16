@@ -12,7 +12,7 @@ pre-commit:
     chroma-css-check:
       glob:
         - "go.mod"
-        - "internal/content/*.go"
+        - "internal/render/*.go"
         - "cmd/blogctl/*.go"
         - "web/app/chroma.css"
       run: make chroma-css-check

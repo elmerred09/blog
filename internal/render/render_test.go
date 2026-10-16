@@ -1,16 +1,16 @@
-package content_test
+package render_test
 
 import (
 	"strings"
 	"testing"
 
-	"github.com/elmerred09/blog/internal/content"
+	"github.com/elmerred09/blog/internal/render"
 )
 
 func TestRender(t *testing.T) {
 	t.Parallel()
 
-	r := content.NewRenderer()
+	r := render.New()
 
 	tests := []struct {
 		name    string
@@ -83,7 +83,7 @@ func TestWriteCSS(t *testing.T) {
 	t.Parallel()
 
 	var buf strings.Builder
-	if err := content.WriteCSS(&buf); err != nil {
+	if err := render.WriteCSS(&buf); err != nil {
 		t.Fatalf("WriteCSS: %v", err)
 	}
 	css := buf.String()

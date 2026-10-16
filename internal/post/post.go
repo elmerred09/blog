@@ -3,14 +3,13 @@ package post
 import (
 	"errors"
 	"time"
+
+	"github.com/elmerred09/blog/internal/tags"
 )
 
 var ErrNotFound = errors.New("post not found")
 
-type Tag struct {
-	Slug string
-	Name string
-}
+type Tag = tags.Tag
 
 // ListItem is a post as it appears in a list: everything but the body.
 type ListItem struct {

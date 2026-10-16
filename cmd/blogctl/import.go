@@ -13,6 +13,7 @@ import (
 
 	"github.com/elmerred09/blog/internal/config"
 	"github.com/elmerred09/blog/internal/content"
+	"github.com/elmerred09/blog/internal/render"
 )
 
 const importUsage = "usage: blogctl import PATH [PATH...]\n\n" +
@@ -62,7 +63,7 @@ func runImport(ctx context.Context, args []string, stdout io.Writer) error {
 		return fmt.Errorf("connect to database (is it running? try make up): %w", err)
 	}
 
-	summary, err := content.NewImporter(pool, content.NewRenderer()).Import(ctx, root.FS(), paths)
+	summary, err := content.NewImporter(pool, render.New()).Import(ctx, root.FS(), paths)
 	if err != nil {
 		return err
 	}

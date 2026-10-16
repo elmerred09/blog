@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/elmerred09/blog/internal/content"
+	"github.com/elmerred09/blog/internal/render"
 )
 
 const cssUsage = "usage: blogctl css\n\n" +
@@ -32,5 +32,5 @@ func runCSS(args []string, stdout io.Writer) error {
 	if _, err := io.WriteString(stdout, cssHeader); err != nil {
 		return fmt.Errorf("write css: %w", err)
 	}
-	return content.WriteCSS(stdout)
+	return render.WriteCSS(stdout)
 }

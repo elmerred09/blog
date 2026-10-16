@@ -1,6 +1,10 @@
 package content
 
-import "time"
+import (
+	"time"
+
+	"github.com/elmerred09/blog/internal/tags"
+)
 
 type Source struct {
 	Path        string
@@ -8,8 +12,6 @@ type Source struct {
 	Title       string
 	Summary     string
 	PublishedAt *time.Time
-	Tags        []Tag
+	Tags        []tags.Tag
 	BodyMD      string
 }
-
-type Tag struct{ Slug, Name string }
