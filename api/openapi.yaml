@@ -298,6 +298,6 @@ components:
           properties:
             code:
               type: string
-              enum: [invalid_request, not_found, method_not_allowed, internal, timeout]
+              enum: [invalid_request, unauthorized, forbidden, not_found, method_not_allowed, internal, timeout]
             message:
               type: string

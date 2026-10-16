@@ -152,7 +152,7 @@ export interface components {
         Error: {
             error: {
                 /** @enum {string} */
-                code: "invalid_request" | "not_found" | "method_not_allowed" | "internal" | "timeout";
+                code: "invalid_request" | "unauthorized" | "forbidden" | "not_found" | "method_not_allowed" | "internal" | "timeout";
                 message: string;
             };
         };
