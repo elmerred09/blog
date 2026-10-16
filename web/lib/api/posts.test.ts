@@ -136,6 +136,17 @@ describe("getPost", () => {
     await expect(getPost("missing")).resolves.toBeNull();
   });
 
+  it("caches a 404 for minutes, so a scheduled post appears soon after its time", async () => {
+    stubFetch(apiError(404, "not_found", "post not found"));
+
+    await getPost("scheduled");
+
+    expect(cacheLife).toHaveBeenCalledExactlyOnceWith("minutes");
+    expect(new Set(vi.mocked(cacheTag).mock.calls.flat())).toEqual(
+      new Set(["posts", "post:scheduled"]),
+    );
+  });
+
   it("is cached for hours under the posts and post:<slug> tags", async () => {
     stubFetch(json(200, post));
 

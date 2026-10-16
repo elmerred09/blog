@@ -32,18 +32,21 @@ export async function listPosts(
   return unwrap(result);
 }
 
-// A 404 returns null, and that null is cached like a post: a newly published
-// post can 404 until the entry expires or the posts tag is revalidated.
+// A 404 returns null, cached for minutes rather than hours: a scheduled post
+// 404s until its published_at, and should appear soon after. cacheLife is
+// called once per branch, after the fetch.
 export async function getPost(slug: string): Promise<Post | null> {
   "use cache";
-  cacheLife("hours");
   cacheTag("posts", `post:${slug}`);
 
   const result = await apiClient().GET("/api/v1/posts/{slug}", {
     params: { path: { slug } },
   });
   if (result.response.status === 404) {
+    cacheLife("minutes");
     return null;
   }
-  return unwrap(result);
+  const post = unwrap(result);
+  cacheLife("hours");
+  return post;
 }
