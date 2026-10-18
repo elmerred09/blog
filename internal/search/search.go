@@ -7,6 +7,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/elmerred09/blog/internal/post"
+	"github.com/elmerred09/blog/internal/validation"
 )
 
 const (
@@ -28,7 +29,7 @@ const (
 
 type Searcher interface {
 	// Search returns the best matches first, at most q.Limit of them. No match
-	// is an empty, non-nil slice. An invalid q is a *ValidationError.
+	// is an empty, non-nil slice. An invalid q is a *validation.Error.
 	Search(ctx context.Context, q Query) ([]Result, error)
 }
 
@@ -38,27 +39,27 @@ type Query struct {
 	Limit int
 }
 
-// ValidationError is an invalid Query. Message is safe to show the client.
-type ValidationError struct {
-	Message string
-}
+// LimitMessage is the problem message for a limit outside 1 to MaxLimit, or
+// one that isn't an integer at all.
+var LimitMessage = fmt.Sprintf("limit must be an integer from 1 to %d", MaxLimit)
 
-func (e *ValidationError) Error() string {
-	return "invalid search query: " + e.Message
-}
-
+// Validate returns a *validation.Error with a problem for q, limit, or both.
 func (q Query) Validate() error {
+	var problems []validation.Problem
 	text := strings.TrimSpace(q.Text)
-	if text == "" {
-		return &ValidationError{Message: "q is required"}
-	}
-	if utf8.RuneCountInString(text) > MaxQueryLen {
-		return &ValidationError{Message: fmt.Sprintf("q must be at most %d characters", MaxQueryLen)}
+	switch {
+	case text == "":
+		problems = append(problems, validation.Problem{Field: "q", Message: "q is required"})
+	case utf8.RuneCountInString(text) > MaxQueryLen:
+		problems = append(problems, validation.Problem{
+			Field:   "q",
+			Message: fmt.Sprintf("q must be at most %d characters", MaxQueryLen),
+		})
 	}
 	if q.Limit < 1 || q.Limit > MaxLimit {
-		return &ValidationError{Message: fmt.Sprintf("limit must be an integer from 1 to %d", MaxLimit)}
+		problems = append(problems, validation.Problem{Field: "limit", Message: LimitMessage})
 	}
-	return nil
+	return validation.New(problems...)
 }
 
 type Result struct {

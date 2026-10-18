@@ -157,3 +157,44 @@ func linkVersions(t *testing.T, conn db.DBTX, postID uuid.UUID) map[int32]versio
 	}
 	return out
 }
+
+func TestStoreList(t *testing.T) {
+	t.Parallel()
+	pool, _ := env.NewDB(t)
+	dbtest.InsertPost(t, pool, dbtest.WithTags("go", "postgres"))
+	dbtest.InsertPost(t, pool, dbtest.Draft(), dbtest.WithTags("drafts-only"))
+	dbtest.InsertTag(t, pool, "unused")
+	store := tags.NewStore(pool)
+
+	tests := []struct {
+		name  string
+		scope tags.Scope
+		want  []string
+	}{
+		{"published hides draft-only and unused tags", tags.Published, []string{"go", "postgres"}},
+		{"all lists every tag", tags.All, []string{"drafts-only", "go", "postgres", "unused"}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := store.List(t.Context(), tc.scope)
+			if err != nil {
+				t.Fatalf("List: %v", err)
+			}
+			slugs := make([]string, len(got))
+			for i, c := range got {
+				slugs[i] = c.Slug
+			}
+			if !slices.Equal(slugs, tc.want) {
+				t.Errorf("slugs = %v, want %v", slugs, tc.want)
+			}
+		})
+	}
+
+	t.Run("the zero scope is an error", func(t *testing.T) {
+		t.Parallel()
+		if _, err := store.List(t.Context(), 0); err == nil {
+			t.Error("List(0) = nil error, want one")
+		}
+	})
+}

@@ -284,24 +284,35 @@ func TestListTags(t *testing.T) {
 	dbtest.InsertPost(t, pool, dbtest.Deleted(), dbtest.WithTags("go"))
 	dbtest.InsertTag(t, pool, "unused")
 
-	rows, err := q.ListTags(t.Context())
-	if err != nil {
-		t.Fatalf("ListTags: %v", err)
+	// Only published, undeleted posts count.
+	tests := []struct {
+		name          string
+		publishedOnly bool
+		want          map[string]int64
+	}{
+		{"every tag", false, map[string]int64{"drafts-only": 0, "go": 1, "postgres": 2, "unused": 0}},
+		{"published only", true, map[string]int64{"go": 1, "postgres": 2}},
 	}
-	got := map[string]int64{}
-	var order []string
-	for _, r := range rows {
-		got[r.Slug] = r.PublishedPosts
-		order = append(order, r.Slug)
-	}
-
-	// Only published, undeleted posts count; every tag is listed.
-	want := map[string]int64{"drafts-only": 0, "go": 1, "postgres": 2, "unused": 0}
-	if !maps.Equal(got, want) {
-		t.Errorf("published posts by tag = %v, want %v", got, want)
-	}
-	if !slices.IsSorted(order) {
-		t.Errorf("order = %v, want sorted by slug", order)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			rows, err := q.ListTags(t.Context(), tc.publishedOnly)
+			if err != nil {
+				t.Fatalf("ListTags: %v", err)
+			}
+			got := map[string]int64{}
+			var order []string
+			for _, r := range rows {
+				got[r.Slug] = r.PublishedPosts
+				order = append(order, r.Slug)
+			}
+			if !maps.Equal(got, tc.want) {
+				t.Errorf("published posts by tag = %v, want %v", got, tc.want)
+			}
+			if !slices.IsSorted(order) {
+				t.Errorf("order = %v, want sorted by slug", order)
+			}
+		})
 	}
 }
 

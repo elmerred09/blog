@@ -14,11 +14,16 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/elmerred09/blog/internal/admin"
+	"github.com/elmerred09/blog/internal/auth"
 	"github.com/elmerred09/blog/internal/config"
 	"github.com/elmerred09/blog/internal/httpapi"
+	"github.com/elmerred09/blog/internal/media"
 	"github.com/elmerred09/blog/internal/platform/db/pgconfig"
 	"github.com/elmerred09/blog/internal/post"
+	"github.com/elmerred09/blog/internal/render"
 	"github.com/elmerred09/blog/internal/search"
+	"github.com/elmerred09/blog/internal/tags"
 )
 
 const (
@@ -69,16 +74,37 @@ func run(ctx context.Context, stopSignals func(), log *slog.Logger) error {
 		return fmt.Errorf("connect to database: %w", err)
 	}
 
+	deps := httpapi.Deps{
+		Logger:         log,
+		DB:             pool,
+		Posts:          post.NewService(pool),
+		Search:         search.NewPostgres(pool),
+		Tags:           tags.NewStore(pool),
+		RequestTimeout: requestTimeout,
+	}
+	if cfg.Admin != nil {
+		verifier, err := auth.NewVerifier(cfg.Admin.PublicKey, cfg.Admin.Subjects)
+		if err != nil {
+			return fmt.Errorf("admin verifier: %w", err)
+		}
+		uploader, err := media.New(cfg.Admin.S3)
+		if err != nil {
+			return fmt.Errorf("media: %w", err)
+		}
+		deps.Admin = &httpapi.Admin{
+			Verifier: verifier,
+			Posts:    admin.NewService(pool, render.New()),
+			Media:    uploader,
+		}
+		log.Info("admin routes enabled")
+	} else {
+		log.Info("admin routes disabled")
+	}
+
 	gin.SetMode(gin.ReleaseMode)
 	srv := &http.Server{
-		Addr: cfg.HTTPAddr,
-		Handler: httpapi.New(httpapi.Deps{
-			Logger:         log,
-			DB:             pool,
-			Posts:          post.NewService(pool),
-			Search:         search.NewPostgres(pool),
-			RequestTimeout: requestTimeout,
-		}),
+		Addr:              cfg.HTTPAddr,
+		Handler:           httpapi.New(deps),
 		ReadHeaderTimeout: readHeaderTimeout,
 		ReadTimeout:       readTimeout,
 		WriteTimeout:      writeTimeout,

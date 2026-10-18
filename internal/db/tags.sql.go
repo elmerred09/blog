@@ -137,6 +137,7 @@ LEFT JOIN posts p
   AND p.published_at <= CURRENT_TIMESTAMP
   AND p.deleted_at IS NULL
 GROUP BY t.id
+HAVING NOT $1::boolean OR count(p.id) > 0
 ORDER BY t.slug ASC
 `
 
@@ -148,8 +149,11 @@ type ListTagsRow struct {
 }
 
 // index: posts_pagination_idx (index-only).
-func (q *Queries) ListTags(ctx context.Context) ([]ListTagsRow, error) {
-	rows, err := q.db.Query(ctx, listTags)
+// With published_only, a tag with no published post is dropped after the
+// count, so the public list can't reveal a draft's tags. Without it, every
+// tag is listed, for the editor. Both read all of tags, a small table.
+func (q *Queries) ListTags(ctx context.Context, publishedOnly bool) ([]ListTagsRow, error) {
+	rows, err := q.db.Query(ctx, listTags, publishedOnly)
 	if err != nil {
 		return nil, err
 	}

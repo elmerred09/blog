@@ -13,6 +13,7 @@ import (
 
 	"github.com/elmerred09/blog/internal/platform/db/dbtest"
 	"github.com/elmerred09/blog/internal/post"
+	"github.com/elmerred09/blog/internal/tags"
 )
 
 // postsAPI returns the router over a fresh database, plus the pool for fixtures.
@@ -20,7 +21,7 @@ func postsAPI(t *testing.T) (http.Handler, *pgxpool.Pool) {
 	t.Helper()
 	pool, _ := env.NewDB(t)
 	log, _ := testLogger()
-	return New(Deps{Logger: log, DB: pool, Posts: post.NewService(pool)}), pool
+	return New(Deps{Logger: log, DB: pool, Posts: post.NewService(pool), Tags: tags.NewStore(pool)}), pool
 }
 
 // keys returns a JSON object's keys, sorted.

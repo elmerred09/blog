@@ -131,10 +131,285 @@ paths:
         "503":
           $ref: "#/components/responses/Timeout"
 
+  /api/v1/tags:
+    get:
+      operationId: listTags
+      summary: Tags used by at least one published post, sorted by slug.
+      responses:
+        "200":
+          description: The tags. Empty when none are published.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TagList"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Timeout"
+
+  /api/v1/admin/posts:
+    get:
+      operationId: listAdminPosts
+      summary: Every non-deleted post, newest created first, with keyset pagination.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - name: cursor
+          in: query
+          description: The previous page's next_cursor, a post id. Opaque; don't build or parse it.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: One page of posts, drafts and scheduled included.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Timeout"
+    post:
+      operationId: createAdminPost
+      summary: Create a post. published_at null is a draft.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminPostInput"
+      responses:
+        "201":
+          description: The created post, including the updated_at token for the next save.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminPost"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/TooLarge"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Timeout"
+
+  /api/v1/admin/posts/{id}:
+    get:
+      operationId: getAdminPost
+      summary: One post in any state, for the editor. Deleted posts are 404.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PostID"
+      responses:
+        "200":
+          description: The post.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminPost"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Timeout"
+    put:
+      operationId: updateAdminPost
+      summary: Save a post. updated_at must be the token the editor loaded; a stale one is 409.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PostID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminPostUpdate"
+      responses:
+        "200":
+          description: The saved post, with a new updated_at token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminPost"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/TooLarge"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Timeout"
+
+  /api/v1/admin/preview:
+    post:
+      operationId: previewPost
+      summary: Render markdown the way a save would store it.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PreviewInput"
+      responses:
+        "200":
+          description: The rendered HTML.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Preview"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/TooLarge"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Timeout"
+
+  /api/v1/admin/uploads:
+    post:
+      operationId: createImageUpload
+      summary: Sign a PUT URL for one image. The browser uploads the bytes straight to the bucket.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadInput"
+      responses:
+        "200":
+          description: The signed URL, the headers the PUT must send, and the public URL to store in the post.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Upload"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/TooLarge"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Timeout"
+
+  /api/v1/admin/tags:
+    get:
+      operationId: listAdminTags
+      summary: Every tag, sorted by slug, including ones used only by drafts or by no post. For the editor's tag autocomplete.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The tags. Empty when none exist.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TagList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Timeout"
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: A short-lived EdDSA token minted by the web server for one admin call.
+
+  parameters:
+    PostID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
   responses:
     BadRequest:
-      description: A query parameter is invalid (code invalid_request).
+      description: The request is invalid (code invalid_request). When input failed validation, problems names each field and message joins their messages; malformed JSON or a bad id has a message only.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Unauthorized:
+      description: No usable token (code unauthorized). The response includes WWW-Authenticate Bearer.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Forbidden:
+      description: A valid token whose subject isn't allowed (code forbidden).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Conflict:
+      description: The save lost a race (code conflict) or the slug is taken (code slug_taken).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    TooLarge:
+      description: The JSON body exceeds 2 MB (code too_large). A markdown body over 1 MB is a 400 instead, so the field message can name it.
       content:
         application/json:
           schema:
@@ -285,6 +560,192 @@ components:
           items:
             $ref: "#/components/schemas/SearchResult"
 
+    TagList:
+      type: object
+      additionalProperties: false
+      required: [tags]
+      properties:
+        tags:
+          description: Sorted by slug. Empty, never null, when no published post has a tag.
+          type: array
+          items:
+            $ref: "#/components/schemas/Tag"
+
+    AdminPostListItem:
+      type: object
+      additionalProperties: false
+      required: [id, slug, title, published_at, updated_at, state]
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        title:
+          type: string
+        published_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          description: The optimistic-lock token. Send it back unchanged on the next save.
+          type: string
+          format: date-time
+        state:
+          type: string
+          enum: [draft, scheduled, published]
+
+    AdminPage:
+      type: object
+      additionalProperties: false
+      required: [items, next_cursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminPostListItem"
+        next_cursor:
+          description: Pass as ?cursor= for the next page. Null on the last page.
+          type: string
+          nullable: true
+
+    AdminPost:
+      type: object
+      additionalProperties: false
+      required: [id, slug, title, summary, body_md, published_at, created_at, updated_at, state, tags]
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        title:
+          type: string
+        summary:
+          type: string
+        body_md:
+          type: string
+        published_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          description: The optimistic-lock token. Send it back unchanged on the next save.
+          type: string
+          format: date-time
+        state:
+          type: string
+          enum: [draft, scheduled, published]
+        tags:
+          description: Sorted by slug. Empty, never null, for an untagged post.
+          type: array
+          items:
+            $ref: "#/components/schemas/Tag"
+
+    AdminPostInput:
+      type: object
+      additionalProperties: false
+      required: [slug, title, summary, body_md, tags]
+      properties:
+        slug:
+          type: string
+        title:
+          type: string
+        summary:
+          type: string
+        body_md:
+          type: string
+        published_at:
+          type: string
+          format: date-time
+          nullable: true
+        tags:
+          description: Display names. Names that share a slug collapse to the first.
+          type: array
+          items:
+            type: string
+
+    AdminPostUpdate:
+      description: AdminPostInput plus the lock token. The fields are repeated rather than built with allOf, because in OpenAPI 3.0 additionalProperties false applies to each allOf branch separately.
+      type: object
+      additionalProperties: false
+      required: [slug, title, summary, body_md, tags, updated_at]
+      properties:
+        slug:
+          type: string
+        title:
+          type: string
+        summary:
+          type: string
+        body_md:
+          type: string
+        published_at:
+          type: string
+          format: date-time
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+        updated_at:
+          description: The updated_at from the post the editor loaded, unchanged.
+          type: string
+          format: date-time
+
+    PreviewInput:
+      type: object
+      additionalProperties: false
+      required: [body_md]
+      properties:
+        body_md:
+          type: string
+
+    Preview:
+      type: object
+      additionalProperties: false
+      required: [body_html]
+      properties:
+        body_html:
+          type: string
+
+    UploadInput:
+      type: object
+      additionalProperties: false
+      required: [content_type, size]
+      properties:
+        content_type:
+          type: string
+        size:
+          description: The exact byte length the signed PUT will accept.
+          type: integer
+          format: int64
+          minimum: 1
+
+    Upload:
+      type: object
+      additionalProperties: false
+      required: [url, headers, public_url]
+      properties:
+        url:
+          description: PUT the file bytes here.
+          type: string
+        headers:
+          description: Send these on the PUT. The signature covers both.
+          type: object
+          additionalProperties: false
+          required: [Content-Type, Content-Length]
+          properties:
+            Content-Type:
+              type: string
+            Content-Length:
+              type: string
+        public_url:
+          description: The anonymous URL to store in the post.
+          type: string
+
     Error:
       description: Returned with every 4xx and 5xx, including 404 for unknown routes and 405 for a known path with the wrong method.
       type: object
@@ -298,6 +759,18 @@ components:
           properties:
             code:
               type: string
-              enum: [invalid_request, unauthorized, forbidden, not_found, method_not_allowed, internal, timeout]
+              enum: [invalid_request, unauthorized, forbidden, not_found, conflict, slug_taken, too_large, method_not_allowed, internal, timeout]
             message:
               type: string
+            problems:
+              description: Present when input failed validation, such as a post, an upload, or a search's q and limit. One entry per problem, in order; a field can appear more than once (each bad tag).
+              type: array
+              items:
+                type: object
+                additionalProperties: false
+                required: [field, message]
+                properties:
+                  field:
+                    type: string
+                  message:
+                    type: string

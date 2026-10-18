@@ -87,25 +87,29 @@ func TestSearchRejectsBadQuery(t *testing.T) {
 	h := New(Deps{Logger: log})
 
 	tooLong := strings.Repeat("a", search.MaxQueryLen+1)
-	for _, query := range []string{
-		"",
-		"q=",
-		"q=%20%09",
-		"q=" + tooLong,
-		"limit=5",
-		"q=go&limit=0",
-		"q=go&limit=-1",
-		"q=go&limit=51",
-		"q=go&limit=abc",
-		"q=go&limit=",
-		"q=go&limit=1.5",
+	for _, tc := range []struct{ query, field string }{
+		{"", "q"},
+		{"q=", "q"},
+		{"q=%20%09", "q"},
+		{"q=" + tooLong, "q"},
+		{"limit=5", "q"},
+		{"q=go&limit=0", "limit"},
+		{"q=go&limit=-1", "limit"},
+		{"q=go&limit=51", "limit"},
+		{"q=go&limit=abc", "limit"},
+		{"q=go&limit=", "limit"},
+		{"q=go&limit=1.5", "limit"},
 	} {
-		t.Run(query, func(t *testing.T) {
+		t.Run(tc.query, func(t *testing.T) {
 			target := "/api/v1/search"
-			if query != "" {
-				target += "?" + query
+			if tc.query != "" {
+				target += "?" + tc.query
 			}
-			wantError(t, get(t, h, target), http.StatusBadRequest, codeInvalidRequest)
+			rec := get(t, h, target)
+			wantError(t, rec, http.StatusBadRequest, codeInvalidRequest)
+			if ps := decode[errorBody](t, rec).Error.Problems; len(ps) != 1 || ps[0].Field != tc.field {
+				t.Errorf("problems = %+v, want one for %s", ps, tc.field)
+			}
 		})
 	}
 

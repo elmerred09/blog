@@ -12,6 +12,7 @@ import (
 	"github.com/elmerred09/blog/internal/platform/db/dbtest"
 	"github.com/elmerred09/blog/internal/post"
 	"github.com/elmerred09/blog/internal/search"
+	"github.com/elmerred09/blog/internal/validation"
 )
 
 func newSearcher(t *testing.T) (*search.Postgres, *pgxpool.Pool) {
@@ -275,9 +276,9 @@ func TestSearchInvalidQuery(t *testing.T) {
 	s := search.NewPostgres(pool)
 
 	_, err := s.Search(t.Context(), search.Query{Text: "  ", Limit: 10})
-	var invalid *search.ValidationError
+	var invalid *validation.Error
 	if !errors.As(err, &invalid) {
-		t.Errorf("err = %v, want a *search.ValidationError", err)
+		t.Errorf("err = %v, want a *validation.Error", err)
 	}
 }
 
@@ -287,7 +288,7 @@ func TestSearchDatabaseError(t *testing.T) {
 	pool.Close()
 
 	_, err := search.NewPostgres(pool).Search(t.Context(), search.Query{Text: "go", Limit: 10})
-	var invalid *search.ValidationError
+	var invalid *validation.Error
 	if err == nil || errors.As(err, &invalid) {
 		t.Errorf("err = %v, want a database error", err)
 	}

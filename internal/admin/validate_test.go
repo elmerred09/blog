@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/elmerred09/blog/internal/render"
+	"github.com/elmerred09/blog/internal/validation"
 )
 
 func TestValidate(t *testing.T) {
@@ -18,31 +19,31 @@ func TestValidate(t *testing.T) {
 	tests := []struct {
 		name string
 		in   Input
-		want []Problem
+		want []validation.Problem
 	}{
 		{"accepts a complete draft", ok, nil},
 		{"trims the title and summary", Input{Slug: "hello", Title: "  Hello  ", Summary: "  A post.  "}, nil},
-		{"title is required", Input{Slug: "hello", Title: "  ", Summary: "A post."}, []Problem{{Field: "title", Message: "title is required"}}},
-		{"summary is required", Input{Slug: "hello", Title: "Hello", Summary: ""}, []Problem{{Field: "summary", Message: "summary is required"}}},
+		{"title is required", Input{Slug: "hello", Title: "  ", Summary: "A post."}, []validation.Problem{{Field: "title", Message: "title is required"}}},
+		{"summary is required", Input{Slug: "hello", Title: "Hello", Summary: ""}, []validation.Problem{{Field: "summary", Message: "summary is required"}}},
 		{
 			"slug must be valid",
 			Input{Slug: "Hello World", Title: "Hello", Summary: "A post."},
-			[]Problem{{Field: "slug", Message: `slug "Hello World" must be lowercase letters, digits, and single dashes`}},
+			[]validation.Problem{{Field: "slug", Message: `slug "Hello World" must be lowercase letters, digits, and single dashes`}},
 		},
 		{
 			"empty slug",
 			Input{Title: "Hello", Summary: "A post."},
-			[]Problem{{Field: "slug", Message: `slug "" must be lowercase letters, digits, and single dashes`}},
+			[]validation.Problem{{Field: "slug", Message: `slug "" must be lowercase letters, digits, and single dashes`}},
 		},
 		{
 			"body over the limit",
 			Input{Slug: "hello", Title: "Hello", Summary: "A post.", BodyMD: strings.Repeat("a", MaxBodyBytes+1)},
-			[]Problem{{Field: "body_md", Message: bodyTooBig(MaxBodyBytes + 1)}},
+			[]validation.Problem{{Field: "body_md", Message: bodyTooBig(MaxBodyBytes + 1)}},
 		},
 		{
 			"each bad tag is its own problem",
 			Input{Slug: "hello", Title: "Hello", Summary: "A post.", TagNames: []string{"???", "!!!"}},
-			[]Problem{
+			[]validation.Problem{
 				{Field: "tags", Message: `tag: slugify "???": no letters or digits`},
 				{Field: "tags", Message: `tag: slugify "!!!": no letters or digits`},
 			},
@@ -61,7 +62,7 @@ func TestValidate(t *testing.T) {
 				}
 				return
 			}
-			var invalid *ValidationError
+			var invalid *validation.Error
 			if !errors.As(err, &invalid) || !slices.Equal(invalid.Problems, tc.want) {
 				t.Errorf("err = %v, want problems %v", err, tc.want)
 			}
@@ -71,11 +72,11 @@ func TestValidate(t *testing.T) {
 	t.Run("reports every problem", func(t *testing.T) {
 		t.Parallel()
 		_, err := validate(Input{})
-		var invalid *ValidationError
+		var invalid *validation.Error
 		if !errors.As(err, &invalid) {
-			t.Fatalf("err = %v, want a *ValidationError", err)
+			t.Fatalf("err = %v, want a *validation.Error", err)
 		}
-		want := []Problem{
+		want := []validation.Problem{
 			{Field: "title", Message: "title is required"},
 			{Field: "summary", Message: "summary is required"},
 			{Field: "slug", Message: `slug "" must be lowercase letters, digits, and single dashes`},
@@ -137,9 +138,9 @@ func TestStateOf(t *testing.T) {
 func TestPreviewRejectsAnOversizedBody(t *testing.T) {
 	t.Parallel()
 	_, err := NewService(nil, render.New()).Preview(strings.Repeat("a", MaxBodyBytes+1))
-	var invalid *ValidationError
-	want := Problem{Field: "body_md", Message: bodyTooBig(MaxBodyBytes + 1)}
+	var invalid *validation.Error
+	want := validation.Problem{Field: "body_md", Message: bodyTooBig(MaxBodyBytes + 1)}
 	if !errors.As(err, &invalid) || len(invalid.Problems) != 1 || invalid.Problems[0] != want {
-		t.Errorf("err = %v, want a *ValidationError with %v", err, want)
+		t.Errorf("err = %v, want a *validation.Error with %v", err, want)
 	}
 }

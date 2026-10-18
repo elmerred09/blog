@@ -5,42 +5,55 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/elmerred09/blog/internal/validation"
 )
 
 func TestQueryValidate(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name    string
-		q       Query
-		wantErr bool
+		name   string
+		q      Query
+		fields []string
 	}{
-		{"word", Query{Text: "postgres", Limit: DefaultLimit}, false},
-		{"phrase with operators", Query{Text: `"keyset pagination" -offset`, Limit: 1}, false},
-		{"max limit", Query{Text: "go", Limit: MaxLimit}, false},
-		{"max length", Query{Text: strings.Repeat("a", MaxQueryLen), Limit: 1}, false},
-		{"max length in runes, not bytes", Query{Text: strings.Repeat("é", MaxQueryLen), Limit: 1}, false},
-		{"surrounding space doesn't count", Query{Text: "  " + strings.Repeat("a", MaxQueryLen) + "\n", Limit: 1}, false},
-		{"empty", Query{Text: "", Limit: 1}, true},
-		{"blank", Query{Text: " \t\n", Limit: 1}, true},
-		{"too long", Query{Text: strings.Repeat("a", MaxQueryLen+1), Limit: 1}, true},
-		{"limit zero", Query{Text: "go", Limit: 0}, true},
-		{"limit negative", Query{Text: "go", Limit: -1}, true},
-		{"limit too big", Query{Text: "go", Limit: MaxLimit + 1}, true},
+		{"word", Query{Text: "postgres", Limit: DefaultLimit}, nil},
+		{"phrase with operators", Query{Text: `"keyset pagination" -offset`, Limit: 1}, nil},
+		{"max limit", Query{Text: "go", Limit: MaxLimit}, nil},
+		{"max length", Query{Text: strings.Repeat("a", MaxQueryLen), Limit: 1}, nil},
+		{"max length in runes, not bytes", Query{Text: strings.Repeat("é", MaxQueryLen), Limit: 1}, nil},
+		{"surrounding space doesn't count", Query{Text: "  " + strings.Repeat("a", MaxQueryLen) + "\n", Limit: 1}, nil},
+		{"empty", Query{Text: "", Limit: 1}, []string{"q"}},
+		{"blank", Query{Text: " \t\n", Limit: 1}, []string{"q"}},
+		{"too long", Query{Text: strings.Repeat("a", MaxQueryLen+1), Limit: 1}, []string{"q"}},
+		{"limit zero", Query{Text: "go", Limit: 0}, []string{"limit"}},
+		{"limit negative", Query{Text: "go", Limit: -1}, []string{"limit"}},
+		{"limit too big", Query{Text: "go", Limit: MaxLimit + 1}, []string{"limit"}},
+		{"both", Query{Text: "", Limit: 0}, []string{"q", "limit"}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			err := tc.q.Validate()
-			if !tc.wantErr {
+			if tc.fields == nil {
 				if err != nil {
 					t.Errorf("Validate() = %v, want nil", err)
 				}
 				return
 			}
-			var ve *ValidationError
-			if !errors.As(err, &ve) || ve.Message == "" {
-				t.Errorf("Validate() = %v, want a *ValidationError with a message", err)
+			var invalid *validation.Error
+			if !errors.As(err, &invalid) {
+				t.Fatalf("Validate() = %v, want a *validation.Error", err)
+			}
+			got := make([]string, len(invalid.Problems))
+			for i, p := range invalid.Problems {
+				got[i] = p.Field
+				if p.Message == "" {
+					t.Errorf("problem %s has an empty message", p.Field)
+				}
+			}
+			if !slices.Equal(got, tc.fields) {
+				t.Errorf("fields = %v, want %v", got, tc.fields)
 			}
 		})
 	}

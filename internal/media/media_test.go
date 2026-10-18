@@ -6,6 +6,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/elmerred09/blog/internal/validation"
 )
 
 func testUploader(t *testing.T) *Uploader {
@@ -89,9 +91,9 @@ func TestPresignImageUploadRejects(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			_, err := u.PresignImageUpload(t.Context(), tc.contentType, tc.size)
-			var invalid *ValidationError
+			var invalid *validation.Error
 			if !errors.As(err, &invalid) {
-				t.Fatalf("err = %v, want a *ValidationError", err)
+				t.Fatalf("err = %v, want a *validation.Error", err)
 			}
 			got := make([]string, len(invalid.Problems))
 			for i, p := range invalid.Problems {

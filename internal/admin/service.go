@@ -18,6 +18,7 @@ import (
 	"github.com/elmerred09/blog/internal/render"
 	"github.com/elmerred09/blog/internal/slug"
 	"github.com/elmerred09/blog/internal/tags"
+	"github.com/elmerred09/blog/internal/validation"
 )
 
 const (
@@ -41,27 +42,6 @@ var (
 	// ErrInvalidLimit means ListParams.Limit is outside 1 to MaxLimit.
 	ErrInvalidLimit = fmt.Errorf("limit must be between 1 and %d", MaxLimit)
 )
-
-// Problem is one field that failed validation. Field is the input name
-// (title, summary, slug, body_md, tags) and Message is safe to show beside it.
-type Problem struct {
-	Field   string
-	Message string
-}
-
-// ValidationError is an invalid post. Problems lists every failure, so a form
-// can show each one beside its field. Error is for logs; don't show it whole.
-type ValidationError struct {
-	Problems []Problem
-}
-
-func (e *ValidationError) Error() string {
-	parts := make([]string, len(e.Problems))
-	for i, p := range e.Problems {
-		parts[i] = p.Field + ": " + p.Message
-	}
-	return "invalid post: " + strings.Join(parts, "; ")
-}
 
 // State is where a post is in its life, derived from published_at.
 type State string
@@ -318,10 +298,11 @@ func (s *Service) Update(ctx context.Context, u Update) (Post, error) {
 	return saved, nil
 }
 
-// Preview renders markdown the way a save would store it.
+// Preview renders markdown the way a save would store it. An oversized body
+// is a *validation.Error.
 func (s *Service) Preview(md string) (string, error) {
 	if len(md) > MaxBodyBytes {
-		return "", invalid(Problem{Field: "body_md", Message: bodyTooBig(len(md))})
+		return "", validation.New(validation.Problem{Field: "body_md", Message: bodyTooBig(len(md))})
 	}
 	html, err := s.render.Render([]byte(md))
 	if err != nil {
@@ -354,36 +335,38 @@ func (s *Service) prepare(in Input) (prepared, error) {
 	return p, nil
 }
 
+// validate checks the input and returns a *validation.Error listing every
+// problem, or the cleaned fields.
 func validate(in Input) (prepared, error) {
-	var problems []Problem
+	var problems []validation.Problem
 
 	title := strings.TrimSpace(in.Title)
 	if title == "" {
-		problems = append(problems, Problem{Field: "title", Message: "title is required"})
+		problems = append(problems, validation.Problem{Field: "title", Message: "title is required"})
 	}
 	summary := strings.TrimSpace(in.Summary)
 	if summary == "" {
-		problems = append(problems, Problem{Field: "summary", Message: "summary is required"})
+		problems = append(problems, validation.Problem{Field: "summary", Message: "summary is required"})
 	}
 	if !slug.Valid(in.Slug) {
-		problems = append(problems, Problem{
+		problems = append(problems, validation.Problem{
 			Field:   "slug",
 			Message: fmt.Sprintf("slug %q must be lowercase letters, digits, and single dashes", in.Slug),
 		})
 	}
 	if len(in.BodyMD) > MaxBodyBytes {
-		problems = append(problems, Problem{Field: "body_md", Message: bodyTooBig(len(in.BodyMD))})
+		problems = append(problems, validation.Problem{Field: "body_md", Message: bodyTooBig(len(in.BodyMD))})
 	}
 
 	postTags, err := tags.FromNames(in.TagNames)
 	if err != nil {
 		for _, tagErr := range flatten(err) {
-			problems = append(problems, Problem{Field: "tags", Message: tagErr.Error()})
+			problems = append(problems, validation.Problem{Field: "tags", Message: tagErr.Error()})
 		}
 	}
 
-	if len(problems) > 0 {
-		return prepared{}, invalid(problems...)
+	if err := validation.New(problems...); err != nil {
+		return prepared{}, err
 	}
 	if postTags == nil {
 		postTags = []tags.Tag{}
@@ -400,10 +383,6 @@ func validate(in Input) (prepared, error) {
 
 func bodyTooBig(n int) string {
 	return fmt.Sprintf("body is %d bytes, the limit is %d", n, MaxBodyBytes)
-}
-
-func invalid(problems ...Problem) error {
-	return &ValidationError{Problems: problems}
 }
 
 // flatten reports every error errors.Join bundled, or err itself.

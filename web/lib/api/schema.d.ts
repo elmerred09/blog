@@ -89,6 +89,110 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Tags used by at least one published post, sorted by slug. */
+        get: operations["listTags"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/posts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every non-deleted post, newest created first, with keyset pagination. */
+        get: operations["listAdminPosts"];
+        put?: never;
+        /** Create a post. published_at null is a draft. */
+        post: operations["createAdminPost"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/posts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One post in any state, for the editor. Deleted posts are 404. */
+        get: operations["getAdminPost"];
+        /** Save a post. updated_at must be the token the editor loaded; a stale one is 409. */
+        put: operations["updateAdminPost"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Render markdown the way a save would store it. */
+        post: operations["previewPost"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/uploads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sign a PUT URL for one image. The browser uploads the bytes straight to the bucket. */
+        post: operations["createImageUpload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every tag, sorted by slug, including ones used only by drafts or by no post. For the editor's tag autocomplete. */
+        get: operations["listAdminTags"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -148,18 +252,154 @@ export interface components {
         SearchResults: {
             items: components["schemas"]["SearchResult"][];
         };
+        TagList: {
+            /** @description Sorted by slug. Empty, never null, when no published post has a tag. */
+            tags: components["schemas"]["Tag"][];
+        };
+        AdminPostListItem: {
+            /** Format: uuid */
+            id: string;
+            slug: string;
+            title: string;
+            /** Format: date-time */
+            published_at: string | null;
+            /**
+             * Format: date-time
+             * @description The optimistic-lock token. Send it back unchanged on the next save.
+             */
+            updated_at: string;
+            /** @enum {string} */
+            state: "draft" | "scheduled" | "published";
+        };
+        AdminPage: {
+            items: components["schemas"]["AdminPostListItem"][];
+            /** @description Pass as ?cursor= for the next page. Null on the last page. */
+            next_cursor: string | null;
+        };
+        AdminPost: {
+            /** Format: uuid */
+            id: string;
+            slug: string;
+            title: string;
+            summary: string;
+            body_md: string;
+            /** Format: date-time */
+            published_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /**
+             * Format: date-time
+             * @description The optimistic-lock token. Send it back unchanged on the next save.
+             */
+            updated_at: string;
+            /** @enum {string} */
+            state: "draft" | "scheduled" | "published";
+            /** @description Sorted by slug. Empty, never null, for an untagged post. */
+            tags: components["schemas"]["Tag"][];
+        };
+        AdminPostInput: {
+            slug: string;
+            title: string;
+            summary: string;
+            body_md: string;
+            /** Format: date-time */
+            published_at?: string | null;
+            /** @description Display names. Names that share a slug collapse to the first. */
+            tags: string[];
+        };
+        /** @description AdminPostInput plus the lock token. The fields are repeated rather than built with allOf, because in OpenAPI 3.0 additionalProperties false applies to each allOf branch separately. */
+        AdminPostUpdate: {
+            slug: string;
+            title: string;
+            summary: string;
+            body_md: string;
+            /** Format: date-time */
+            published_at?: string | null;
+            tags: string[];
+            /**
+             * Format: date-time
+             * @description The updated_at from the post the editor loaded, unchanged.
+             */
+            updated_at: string;
+        };
+        PreviewInput: {
+            body_md: string;
+        };
+        Preview: {
+            body_html: string;
+        };
+        UploadInput: {
+            content_type: string;
+            /**
+             * Format: int64
+             * @description The exact byte length the signed PUT will accept.
+             */
+            size: number;
+        };
+        Upload: {
+            /** @description PUT the file bytes here. */
+            url: string;
+            /** @description Send these on the PUT. The signature covers both. */
+            headers: {
+                "Content-Type": string;
+                "Content-Length": string;
+            };
+            /** @description The anonymous URL to store in the post. */
+            public_url: string;
+        };
         /** @description Returned with every 4xx and 5xx, including 404 for unknown routes and 405 for a known path with the wrong method. */
         Error: {
             error: {
                 /** @enum {string} */
-                code: "invalid_request" | "unauthorized" | "forbidden" | "not_found" | "method_not_allowed" | "internal" | "timeout";
+                code: "invalid_request" | "unauthorized" | "forbidden" | "not_found" | "conflict" | "slug_taken" | "too_large" | "method_not_allowed" | "internal" | "timeout";
                 message: string;
+                /** @description Present when input failed validation, such as a post, an upload, or a search's q and limit. One entry per problem, in order; a field can appear more than once (each bad tag). */
+                problems?: {
+                    field: string;
+                    message: string;
+                }[];
             };
         };
     };
     responses: {
-        /** @description A query parameter is invalid (code invalid_request). */
+        /** @description The request is invalid (code invalid_request). When input failed validation, problems names each field and message joins their messages; malformed JSON or a bad id has a message only. */
         BadRequest: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description No usable token (code unauthorized). The response includes WWW-Authenticate Bearer. */
+        Unauthorized: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description A valid token whose subject isn't allowed (code forbidden). */
+        Forbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description The save lost a race (code conflict) or the slug is taken (code slug_taken). */
+        Conflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description The JSON body exceeds 2 MB (code too_large). A markdown body over 1 MB is a 400 instead, so the field message can name it. */
+        TooLarge: {
             headers: {
                 [name: string]: unknown;
             };
@@ -195,7 +435,9 @@ export interface components {
             };
         };
     };
-    parameters: never;
+    parameters: {
+        PostID: string;
+    };
     requestBodies: never;
     headers: never;
     pathItems: never;
@@ -326,6 +568,234 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Timeout"];
+        };
+    };
+    listTags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The tags. Empty when none are published. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagList"];
+                };
+            };
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Timeout"];
+        };
+    };
+    listAdminPosts: {
+        parameters: {
+            query?: {
+                limit?: number;
+                /** @description The previous page's next_cursor, a post id. Opaque; don't build or parse it. */
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of posts, drafts and scheduled included. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Timeout"];
+        };
+    };
+    createAdminPost: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminPostInput"];
+            };
+        };
+        responses: {
+            /** @description The created post, including the updated_at token for the next save. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPost"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            413: components["responses"]["TooLarge"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Timeout"];
+        };
+    };
+    getAdminPost: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["PostID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The post. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPost"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Timeout"];
+        };
+    };
+    updateAdminPost: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["PostID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminPostUpdate"];
+            };
+        };
+        responses: {
+            /** @description The saved post, with a new updated_at token. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPost"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            413: components["responses"]["TooLarge"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Timeout"];
+        };
+    };
+    previewPost: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreviewInput"];
+            };
+        };
+        responses: {
+            /** @description The rendered HTML. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Preview"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            413: components["responses"]["TooLarge"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Timeout"];
+        };
+    };
+    createImageUpload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UploadInput"];
+            };
+        };
+        responses: {
+            /** @description The signed URL, the headers the PUT must send, and the public URL to store in the post. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Upload"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            413: components["responses"]["TooLarge"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Timeout"];
+        };
+    };
+    listAdminTags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The tags. Empty when none exist. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             500: components["responses"]["Internal"];
             503: components["responses"]["Timeout"];
         };

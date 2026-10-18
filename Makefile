@@ -40,7 +40,7 @@ API_URL ?= http://localhost:8080
 # Files for web-fmt, relative to web/ or absolute; override with WEB_FILES="app/page.tsx".
 WEB_FILES ?= .
 
-.PHONY: sqlc sqlc-check lint fmt fmt-check test deps-check hooks migrate migrate-down migrate-status migrate-new up down restart seed import api node-check \
+.PHONY: sqlc sqlc-check lint fmt fmt-check test deps-check hooks migrate migrate-down migrate-status migrate-new up down restart seed import api admin-keys node-check \
 	web-install web-deps web web-build web-lint web-typecheck web-fmt web-fmt-check web-test web-types web-types-check web-check \
 	chroma-css chroma-css-check
 
@@ -76,7 +76,12 @@ seed:
 	docker compose exec -T postgres psql "$(GOOSE_DBSTRING)" -v ON_ERROR_STOP=1 < $(SEED_DIR)/$(SEED).sql
 
 api:
-	DATABASE_URL="$(GOOSE_DBSTRING)" $(GO) run ./cmd/api
+	@set -a; [ -f .env ] && . ./.env; set +a; \
+		DATABASE_URL="$(GOOSE_DBSTRING)" $(GO) run ./cmd/api
+
+# Writes the gitignored .env and web/.env.local; see scripts/admin-keys.sh.
+admin-keys:
+	@scripts/admin-keys.sh "$(ADMIN_GITHUB_ID)"
 
 import:
 	@if [ -z "$(POSTS)" ]; then echo 'usage: make import POSTS="content/a.md content/"'; exit 2; fi
@@ -138,6 +143,8 @@ web-deps:
 		echo "web/node_modules is missing or older than package-lock.json; run: make web-install"; exit 1; \
 	fi
 
+# Next loads web/.env.local itself. Don't source it here: exported variables
+# win over the file, and the shell would keep each \n in the key literal.
 web: web-deps
 	cd $(WEB) && API_URL="$(API_URL)" npm run dev
 

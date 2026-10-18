@@ -2,6 +2,8 @@ package httpapi
 
 import (
 	"bytes"
+	"crypto/ed25519"
+	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,6 +19,8 @@ import (
 	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/getkin/kin-openapi/routers"
 	"github.com/getkin/kin-openapi/routers/gorillamux"
+
+	"github.com/elmerred09/blog/internal/auth"
 )
 
 const specPath = "../../api/openapi.yaml"
@@ -114,8 +118,18 @@ func TestSpecMatchesRouter(t *testing.T) {
 	c := mustContract(t)
 	log, _ := testLogger()
 
+	// Admin routes exist only when configured, so the comparison uses an engine
+	// that has them. The verifier is never called.
+	pub, _, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatalf("generate key: %v", err)
+	}
+	verifier, err := auth.NewVerifier(pub, []string{"github:1"})
+	if err != nil {
+		t.Fatalf("NewVerifier: %v", err)
+	}
 	var routed []string
-	for _, r := range newEngine(Deps{Logger: log}).Routes() {
+	for _, r := range newEngine(Deps{Logger: log, Admin: &Admin{Verifier: verifier}}).Routes() {
 		routed = append(routed, r.Method+" "+ginParam.ReplaceAllString(r.Path, "{$1}"))
 	}
 	var documented []string

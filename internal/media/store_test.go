@@ -120,7 +120,9 @@ func applyBucketConfig(ctx context.Context, client *minio.Client) error {
 	if err != nil {
 		return err
 	}
-	if err := client.SetBucketPolicy(ctx, storeBucket, string(policy)); err != nil {
+	// BUCKET in the ARN is a placeholder, filled in the way init.sh does.
+	filled := strings.ReplaceAll(string(policy), "BUCKET", storeBucket)
+	if err := client.SetBucketPolicy(ctx, storeBucket, filled); err != nil {
 		return fmt.Errorf("set bucket policy: %w", err)
 	}
 

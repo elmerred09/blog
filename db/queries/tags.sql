@@ -44,6 +44,9 @@ ON CONFLICT (post_id, tag_id) DO NOTHING;
 
 -- name: ListTags :many
 -- index: posts_pagination_idx (index-only).
+-- With published_only, a tag with no published post is dropped after the
+-- count, so the public list can't reveal a draft's tags. Without it, every
+-- tag is listed, for the editor. Both read all of tags, a small table.
 SELECT t.id, t.slug, t.name, count(p.id) AS published_posts
 FROM tags t
 LEFT JOIN post_tags pt ON pt.tag_id = t.id
@@ -52,6 +55,7 @@ LEFT JOIN posts p
   AND p.published_at <= CURRENT_TIMESTAMP
   AND p.deleted_at IS NULL
 GROUP BY t.id
+HAVING NOT sqlc.arg(published_only)::boolean OR count(p.id) > 0
 ORDER BY t.slug ASC;
 
 -- name: ListPostsByTag :many

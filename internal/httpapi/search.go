@@ -1,14 +1,13 @@
 package httpapi
 
 import (
-	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/elmerred09/blog/internal/search"
+	"github.com/elmerred09/blog/internal/validation"
 )
 
 type fragmentJSON struct {
@@ -25,29 +24,24 @@ type searchResultsJSON struct {
 	Items []searchResultJSON `json:"items"`
 }
 
-var invalidSearchLimitMessage = fmt.Sprintf("limit must be an integer from 1 to %d", search.MaxLimit)
-
 func searchPosts(searcher search.Searcher) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		q := search.Query{Text: c.Query("q"), Limit: search.DefaultLimit}
 		if raw, ok := c.GetQuery("limit"); ok {
 			n, err := strconv.Atoi(raw)
 			if err != nil {
-				writeError(c, http.StatusBadRequest, codeInvalidRequest, invalidSearchLimitMessage)
+				writeInvalid(c, validation.New(validation.Problem{Field: "limit", Message: search.LimitMessage}))
 				return
 			}
 			q.Limit = n
 		}
 
-		var invalid *search.ValidationError
-		if err := q.Validate(); errors.As(err, &invalid) {
-			writeError(c, http.StatusBadRequest, codeInvalidRequest, invalid.Message)
+		if writeInvalid(c, q.Validate()) {
 			return
 		}
 
 		results, err := searcher.Search(c.Request.Context(), q)
-		if errors.As(err, &invalid) {
-			writeError(c, http.StatusBadRequest, codeInvalidRequest, invalid.Message)
+		if writeInvalid(c, err) {
 			return
 		}
 		if err != nil {

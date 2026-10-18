@@ -16,6 +16,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+
+	"github.com/elmerred09/blog/internal/validation"
 )
 
 const (
@@ -48,26 +50,6 @@ type Config struct {
 	SecretKey     string
 	PublicBaseURL string
 	Secure        bool
-}
-
-// Problem is one input that failed validation. Message is safe to show.
-type Problem struct {
-	Field   string
-	Message string
-}
-
-// ValidationError is an upload request that will not be signed. Problems
-// lists every failure.
-type ValidationError struct {
-	Problems []Problem
-}
-
-func (e *ValidationError) Error() string {
-	parts := make([]string, len(e.Problems))
-	for i, p := range e.Problems {
-		parts[i] = p.Field + ": " + p.Message
-	}
-	return "invalid upload: " + strings.Join(parts, "; ")
 }
 
 // Upload is what the browser needs. URL is the signed PUT. Headers must be
@@ -108,24 +90,25 @@ func New(cfg Config) (*Uploader, error) {
 }
 
 // PresignImageUpload signs a PUT for one image. The object key is generated
-// here, under images/, so the caller cannot choose it.
+// here, under images/, so the caller cannot choose it. A disallowed type or
+// size is a *validation.Error.
 func (u *Uploader) PresignImageUpload(ctx context.Context, contentType string, size int64) (Upload, error) {
-	var problems []Problem
+	var problems []validation.Problem
 	ext, ok := extensions[contentType]
 	if !ok {
-		problems = append(problems, Problem{
+		problems = append(problems, validation.Problem{
 			Field:   "content_type",
 			Message: "content type must be image/png, image/jpeg, image/webp, or image/gif",
 		})
 	}
 	if size < 1 || size > MaxBytes {
-		problems = append(problems, Problem{
+		problems = append(problems, validation.Problem{
 			Field:   "size",
 			Message: fmt.Sprintf("size must be from 1 byte to %d", MaxBytes),
 		})
 	}
-	if len(problems) > 0 {
-		return Upload{}, &ValidationError{Problems: problems}
+	if err := validation.New(problems...); err != nil {
+		return Upload{}, err
 	}
 
 	id, err := uuid.NewV7()

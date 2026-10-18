@@ -96,3 +96,46 @@ func Link(ctx context.Context, q *db.Queries, postID uuid.UUID, tagIDs []int32) 
 	}
 	return int(n), removed, nil
 }
+
+// Counted is a tag plus how many published posts use it. The count can be 0.
+type Counted struct {
+	Tag
+	PublishedPosts int64
+}
+
+// Scope chooses which tags Store.List returns.
+type Scope int
+
+const (
+	// Published is the tags on at least one published post, the only ones the
+	// public may see. A tag used only by drafts or scheduled posts is hidden.
+	Published Scope = iota + 1
+	// All is every tag, including unused ones, for the editor.
+	All
+)
+
+// Store reads tags outside a write transaction. The write helpers above take
+// the caller's *db.Queries instead, so they join its transaction.
+type Store struct {
+	q *db.Queries
+}
+
+func NewStore(conn db.DBTX) *Store {
+	return &Store{q: db.New(conn)}
+}
+
+// List returns the tags in scope, ordered by slug, with published-post counts.
+func (s *Store) List(ctx context.Context, scope Scope) ([]Counted, error) {
+	if scope != Published && scope != All {
+		return nil, fmt.Errorf("list tags: unknown scope %d", scope)
+	}
+	rows, err := s.q.ListTags(ctx, scope == Published)
+	if err != nil {
+		return nil, fmt.Errorf("list tags: %w", err)
+	}
+	out := make([]Counted, len(rows))
+	for i, r := range rows {
+		out[i] = Counted{Slug: r.Slug, Name: r.Name, PublishedPosts: r.PublishedPosts}
+	}
+	return out, nil
+}

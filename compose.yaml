@@ -31,12 +31,13 @@ services:
   rustfs:
     image: rustfs/rustfs:1.0.1
     restart: unless-stopped
+    # RUSTFS_ACCESS_KEY and RUSTFS_SECRET_KEY, shared with scripts/admin-keys.sh.
+    env_file: deploy/rustfs/local.env
     environment:
-      RUSTFS_ACCESS_KEY: blog
-      RUSTFS_SECRET_KEY: blogsecret
       RUSTFS_ADDRESS: ":9000"
       RUSTFS_CONSOLE_ENABLE: "false"
     ports:
+      # scripts/admin-keys.sh points the API at this host port.
       - "127.0.0.1:9000:9000"
     volumes:
       - rustfsdata:/data
@@ -55,10 +56,9 @@ services:
     depends_on:
       rustfs:
         condition: service_healthy
+    # init.sh maps these to the AWS CLI's credential and region variables.
+    env_file: deploy/rustfs/local.env
     environment:
-      AWS_ACCESS_KEY_ID: blog
-      AWS_SECRET_ACCESS_KEY: blogsecret
-      AWS_DEFAULT_REGION: us-east-1
       # RustFS does not implement the default CRC64 checksums of AWS CLI 2.23+.
       AWS_REQUEST_CHECKSUM_CALCULATION: when_required
       AWS_RESPONSE_CHECKSUM_VALIDATION: when_required

@@ -15,6 +15,7 @@ import (
 	"github.com/elmerred09/blog/internal/post"
 	"github.com/elmerred09/blog/internal/render"
 	"github.com/elmerred09/blog/internal/tags"
+	"github.com/elmerred09/blog/internal/validation"
 )
 
 func newService(t *testing.T) (*pgxpool.Pool, *admin.Service) {
@@ -89,9 +90,9 @@ func TestCreateRejectsInvalidInput(t *testing.T) {
 	_, svc := newService(t)
 
 	_, err := svc.Create(t.Context(), admin.Input{Slug: "Hello"})
-	var invalid *admin.ValidationError
+	var invalid *validation.Error
 	if !errors.As(err, &invalid) || len(invalid.Problems) == 0 || invalid.Problems[0].Field != "title" {
-		t.Errorf("err = %v, want a *ValidationError whose first problem is the title", err)
+		t.Errorf("err = %v, want a *validation.Error whose first problem is the title", err)
 	}
 }
 
