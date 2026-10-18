@@ -46,3 +46,11 @@ export default async function Posts() {
 ```
 
 - Search input is a client component that updates the URL query (`?q=`); the results page stays a server component reading `searchParams`.
+
+## Admin auth
+
+- Call `requireAdmin()` (`lib/admin/session.ts`) in every admin page and every admin server action, inside a `<Suspense>` boundary for pages. A layout check or `proxy.ts` doesn't guard a page's data or its actions.
+- Never read the session anywhere else, and never trust a GitHub id from the client: it comes from the session, which carries the id GitHub verified.
+- Code that reads request data must read it before branching on server config, or `next build` (where admin env is usually unset) can prerender that branch as static. `make web-build` shows it: admin routes must be ◐ (partial prerender), not ○ (static).
+- Build Better Auth through `getAuth()`, never at module load: `next build` runs with `NODE_ENV=production` and no secret, where constructing it throws.
+- The GitHub id is a user field with `input: true`, because Better Auth drops `input: false` fields from `mapProfileToUser`. A `databaseHooks.user.update.before` hook keeps it read-only; `lib/auth/flow.test.ts` covers that.
