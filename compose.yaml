@@ -26,5 +26,49 @@ services:
       timeout: 3s
       retries: 10
 
+  # Local stand-in for Cloudflare R2. Only the loopback S3 port is published;
+  # the console stays inside the container.
+  rustfs:
+    image: rustfs/rustfs:1.0.1
+    restart: unless-stopped
+    environment:
+      RUSTFS_ACCESS_KEY: blog
+      RUSTFS_SECRET_KEY: blogsecret
+      RUSTFS_ADDRESS: ":9000"
+      RUSTFS_CONSOLE_ENABLE: "false"
+    ports:
+      - "127.0.0.1:9000:9000"
+    volumes:
+      - rustfsdata:/data
+    command: ["/data"]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  # Applies deploy/rustfs once RustFS is up. Re-running replaces the policy
+  # and CORS and leaves an existing bucket alone.
+  rustfs-init:
+    image: amazon/aws-cli:2.27.50
+    depends_on:
+      rustfs:
+        condition: service_healthy
+    environment:
+      AWS_ACCESS_KEY_ID: blog
+      AWS_SECRET_ACCESS_KEY: blogsecret
+      AWS_DEFAULT_REGION: us-east-1
+      # RustFS does not implement the default CRC64 checksums of AWS CLI 2.23+.
+      AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+      AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+    entrypoint: ["/bin/sh", "/init.sh"]
+    volumes:
+      - ./deploy/rustfs/init.sh:/init.sh:ro
+      - ./deploy/rustfs/bucket-policy.json:/policy.json:ro
+      - ./deploy/rustfs/cors.json:/cors.json:ro
+    restart: "no"
+
 volumes:
   pgdata:
+  rustfsdata:
