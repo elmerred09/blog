@@ -12,6 +12,83 @@ import (
 	"github.com/google/uuid"
 )
 
+const createPost = `-- name: CreatePost :one
+INSERT INTO posts (slug, title, summary, body_md, body_html, published_at)
+VALUES (
+  $1,
+  $2,
+  $3,
+  $4,
+  $5,
+  $6
+)
+RETURNING id, updated_at
+`
+
+type CreatePostParams struct {
+	Slug        string
+	Title       string
+	Summary     string
+	BodyMd      string
+	BodyHtml    string
+	PublishedAt *time.Time
+}
+
+type CreatePostRow struct {
+	ID        uuid.UUID
+	UpdatedAt time.Time
+}
+
+// index: posts_slug_key (unique on slug).
+func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (CreatePostRow, error) {
+	row := q.db.QueryRow(ctx, createPost,
+		arg.Slug,
+		arg.Title,
+		arg.Summary,
+		arg.BodyMd,
+		arg.BodyHtml,
+		arg.PublishedAt,
+	)
+	var i CreatePostRow
+	err := row.Scan(&i.ID, &i.UpdatedAt)
+	return i, err
+}
+
+const getPostByID = `-- name: GetPostByID :one
+SELECT id, slug, title, summary, body_md, published_at, created_at, updated_at
+FROM posts
+WHERE id = $1
+  AND deleted_at IS NULL
+`
+
+type GetPostByIDRow struct {
+	ID          uuid.UUID
+	Slug        string
+	Title       string
+	Summary     string
+	BodyMd      string
+	PublishedAt *time.Time
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+// index: posts_pkey (id).
+func (q *Queries) GetPostByID(ctx context.Context, id uuid.UUID) (GetPostByIDRow, error) {
+	row := q.db.QueryRow(ctx, getPostByID, id)
+	var i GetPostByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Slug,
+		&i.Title,
+		&i.Summary,
+		&i.BodyMd,
+		&i.PublishedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getPostBySlug = `-- name: GetPostBySlug :one
 SELECT id, slug, title, summary, body_html, published_at, deleted_at, created_at, updated_at
 FROM posts
@@ -64,6 +141,55 @@ func (q *Queries) GetPostIDBySlug(ctx context.Context, slug string) (uuid.UUID, 
 	var id uuid.UUID
 	err := row.Scan(&id)
 	return id, err
+}
+
+const listAdminPosts = `-- name: ListAdminPosts :many
+SELECT id, slug, title, published_at, updated_at
+FROM posts
+WHERE deleted_at IS NULL
+  AND id < COALESCE($1::uuid, 'ffffffff-ffff-ffff-ffff-ffffffffffff')
+ORDER BY id DESC
+LIMIT $2
+`
+
+type ListAdminPostsParams struct {
+	AfterID  *uuid.UUID
+	PageSize int32
+}
+
+type ListAdminPostsRow struct {
+	ID          uuid.UUID
+	Slug        string
+	Title       string
+	PublishedAt *time.Time
+	UpdatedAt   time.Time
+}
+
+// index: posts_pkey (id), scanned backward from after_id.
+func (q *Queries) ListAdminPosts(ctx context.Context, arg ListAdminPostsParams) ([]ListAdminPostsRow, error) {
+	rows, err := q.db.Query(ctx, listAdminPosts, arg.AfterID, arg.PageSize)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAdminPostsRow
+	for rows.Next() {
+		var i ListAdminPostsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Slug,
+			&i.Title,
+			&i.PublishedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listPosts = `-- name: ListPosts :many
@@ -134,6 +260,63 @@ func (q *Queries) SoftDeletePost(ctx context.Context, id uuid.UUID) (uuid.UUID, 
 	var id_2 uuid.UUID
 	err := row.Scan(&id_2)
 	return id_2, err
+}
+
+const updatePost = `-- name: UpdatePost :one
+WITH updated AS (
+  UPDATE posts
+  SET
+    slug = $2,
+    title = $3,
+    summary = $4,
+    body_md = $5,
+    body_html = $6,
+    published_at = $7,
+    updated_at = CURRENT_TIMESTAMP
+  WHERE posts.id = $1
+    AND posts.deleted_at IS NULL
+    AND posts.updated_at = $8
+  RETURNING posts.updated_at
+)
+SELECT
+  EXISTS (SELECT 1 FROM posts p WHERE p.id = $1 AND p.deleted_at IS NULL) AS found,
+  u.updated_at
+FROM (SELECT 1) AS one
+LEFT JOIN updated u ON true
+`
+
+type UpdatePostParams struct {
+	ID                uuid.UUID
+	Slug              string
+	Title             string
+	Summary           string
+	BodyMd            string
+	BodyHtml          string
+	PublishedAt       *time.Time
+	ExpectedUpdatedAt time.Time
+}
+
+type UpdatePostRow struct {
+	Found     bool
+	UpdatedAt *time.Time
+}
+
+// index: posts_pkey (id) for both the UPDATE and the EXISTS probe; posts_slug_key
+// when the slug changes (23505 if it's taken).
+func (q *Queries) UpdatePost(ctx context.Context, arg UpdatePostParams) (UpdatePostRow, error) {
+	row := q.db.QueryRow(ctx, updatePost,
+		arg.ID,
+		arg.Slug,
+		arg.Title,
+		arg.Summary,
+		arg.BodyMd,
+		arg.BodyHtml,
+		arg.PublishedAt,
+		arg.ExpectedUpdatedAt,
+	)
+	var i UpdatePostRow
+	err := row.Scan(&i.Found, &i.UpdatedAt)
+	return i, err
 }
 
 const upsertPost = `-- name: UpsertPost :one

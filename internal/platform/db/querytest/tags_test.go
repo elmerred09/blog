@@ -273,6 +273,38 @@ func TestListTagsForPosts(t *testing.T) {
 	}
 }
 
+func TestListTags(t *testing.T) {
+	t.Parallel()
+	pool, q := env.NewDB(t)
+
+	dbtest.InsertPost(t, pool, dbtest.WithTags("go", "postgres"))
+	dbtest.InsertPost(t, pool, dbtest.WithTags("postgres"))
+	dbtest.InsertPost(t, pool, dbtest.Draft(), dbtest.WithTags("go", "drafts-only"))
+	dbtest.InsertPost(t, pool, dbtest.ScheduledIn(time.Hour), dbtest.WithTags("go"))
+	dbtest.InsertPost(t, pool, dbtest.Deleted(), dbtest.WithTags("go"))
+	dbtest.InsertTag(t, pool, "unused")
+
+	rows, err := q.ListTags(t.Context())
+	if err != nil {
+		t.Fatalf("ListTags: %v", err)
+	}
+	got := map[string]int64{}
+	var order []string
+	for _, r := range rows {
+		got[r.Slug] = r.PublishedPosts
+		order = append(order, r.Slug)
+	}
+
+	// Only published, undeleted posts count; every tag is listed.
+	want := map[string]int64{"drafts-only": 0, "go": 1, "postgres": 2, "unused": 0}
+	if !maps.Equal(got, want) {
+		t.Errorf("published posts by tag = %v, want %v", got, want)
+	}
+	if !slices.IsSorted(order) {
+		t.Errorf("order = %v, want sorted by slug", order)
+	}
+}
+
 func TestListPostsByTag(t *testing.T) {
 	t.Parallel()
 	pool, q := env.NewDB(t)

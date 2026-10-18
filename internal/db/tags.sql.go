@@ -128,6 +128,51 @@ func (q *Queries) ListPostsByTag(ctx context.Context, arg ListPostsByTagParams) 
 	return items, nil
 }
 
+const listTags = `-- name: ListTags :many
+SELECT t.id, t.slug, t.name, count(p.id) AS published_posts
+FROM tags t
+LEFT JOIN post_tags pt ON pt.tag_id = t.id
+LEFT JOIN posts p
+  ON p.id = pt.post_id
+  AND p.published_at <= CURRENT_TIMESTAMP
+  AND p.deleted_at IS NULL
+GROUP BY t.id
+ORDER BY t.slug ASC
+`
+
+type ListTagsRow struct {
+	ID             int32
+	Slug           string
+	Name           string
+	PublishedPosts int64
+}
+
+// index: posts_pagination_idx (index-only).
+func (q *Queries) ListTags(ctx context.Context) ([]ListTagsRow, error) {
+	rows, err := q.db.Query(ctx, listTags)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListTagsRow
+	for rows.Next() {
+		var i ListTagsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Slug,
+			&i.Name,
+			&i.PublishedPosts,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listTagsForPost = `-- name: ListTagsForPost :many
 SELECT t.id, t.slug, t.name
 FROM tags t

@@ -42,6 +42,18 @@ INSERT INTO post_tags (post_id, tag_id)
 SELECT sqlc.arg(post_id), UNNEST(sqlc.arg(tag_ids)::int[])
 ON CONFLICT (post_id, tag_id) DO NOTHING;
 
+-- name: ListTags :many
+-- index: posts_pagination_idx (index-only).
+SELECT t.id, t.slug, t.name, count(p.id) AS published_posts
+FROM tags t
+LEFT JOIN post_tags pt ON pt.tag_id = t.id
+LEFT JOIN posts p
+  ON p.id = pt.post_id
+  AND p.published_at <= CURRENT_TIMESTAMP
+  AND p.deleted_at IS NULL
+GROUP BY t.id
+ORDER BY t.slug ASC;
+
 -- name: ListPostsByTag :many
 -- index: posts_pagination_idx (published_at DESC, id DESC) WHERE published_at IS NOT NULL AND deleted_at IS NULL.
 SELECT p.id, p.slug, p.title, p.published_at
