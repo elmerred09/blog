@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "better-auth": "1.7.10",
+    "jose": "^6.2.12",
     "next": "16.4.0",
     "openapi-fetch": "^0.17.0",
     "react": "19.3.0",

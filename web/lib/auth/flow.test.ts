@@ -20,6 +20,7 @@ function newAuth() {
     GITHUB_CLIENT_ID: "client",
     GITHUB_CLIENT_SECRET: "secret",
     ADMIN_GITHUB_IDS: String(ALLOWED),
+    ADMIN_JWT_PRIVATE_KEY: "unused here",
   });
   return betterAuth({ ...authOptions(settings!), logger: { disabled: true } });
 }

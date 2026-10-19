@@ -10,6 +10,9 @@ export const AUTH_ENV = [
   "GITHUB_CLIENT_ID",
   "GITHUB_CLIENT_SECRET",
   "ADMIN_GITHUB_IDS",
+  // Read by lib/api/token.ts, which signs each admin API call. Listed here so
+  // a signed-in admin can't hit a missing key on the first save.
+  "ADMIN_JWT_PRIVATE_KEY",
 ] as const;
 
 type Env = Record<string, string | undefined>;

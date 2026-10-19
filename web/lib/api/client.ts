@@ -17,7 +17,7 @@ export function apiClient() {
   return createClient<paths>({ baseUrl });
 }
 
-type Result<T> = { data?: T; error?: unknown; response: Response };
+export type Result<T> = { data?: T; error?: unknown; response: Response };
 
 // Checks response.ok rather than error: openapi-fetch leaves error undefined
 // for an empty error body.

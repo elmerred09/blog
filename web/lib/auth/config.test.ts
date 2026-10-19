@@ -9,6 +9,7 @@ const full = {
   GITHUB_CLIENT_ID: "client",
   GITHUB_CLIENT_SECRET: "secret",
   ADMIN_GITHUB_IDS: "123, 456",
+  ADMIN_JWT_PRIVATE_KEY: "-----BEGIN PRIVATE KEY-----\n...",
 };
 
 describe("readAuthEnv", () => {

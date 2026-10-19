@@ -54,3 +54,10 @@ export default async function Posts() {
 - Code that reads request data must read it before branching on server config, or `next build` (where admin env is usually unset) can prerender that branch as static. `make web-build` shows it: admin routes must be ◐ (partial prerender), not ○ (static).
 - Build Better Auth through `getAuth()`, never at module load: `next build` runs with `NODE_ENV=production` and no secret, where constructing it throws.
 - The GitHub id is a user field with `input: true`, because Better Auth drops `input: false` fields from `mapProfileToUser`. A `databaseHooks.user.update.before` hook keeps it read-only; `lib/auth/flow.test.ts` covers that.
+
+## Admin API calls
+
+- Call the admin API only through `lib/api/admin.ts`, passing the `Admin` from `requireAdmin()`. Don't add `"use cache"` there or export it from the `lib/api` barrel: it's per-admin and uncached.
+- Treat `updated_at` as an opaque string: pass it back exactly as loaded. Never put it through `new Date()` or `toISOString()`; that drops the microseconds and every save becomes a 409.
+- Server actions take plain objects, not `FormData`, and check their argument's shape at runtime (`lib/admin/input.ts`): an action is a public POST endpoint, and TypeScript types don't reach the wire. Content rules stay in the API.
+- After a write, expire the caches that render it with `updateTag`: `posts` and `post:<slug>`, plus `post:<old slug>` on a rename.
