@@ -88,9 +88,21 @@ func TestWriteCSS(t *testing.T) {
 	}
 	css := buf.String()
 
-	light, dark, ok := strings.Cut(css, "@media (prefers-color-scheme: dark) {")
+	// A rule outside both blocks would apply in both themes: a light-theme
+	// color the dark theme doesn't override would show on the dark background.
+	before, rest, ok := strings.Cut(css, "@media (prefers-color-scheme: light) {")
+	if !ok {
+		t.Fatalf("no light-mode block:\n%s", css)
+	}
+	if strings.Contains(before, "{") {
+		t.Errorf("rules outside the light-mode block:\n%s", before)
+	}
+	light, dark, ok := strings.Cut(rest, "@media (prefers-color-scheme: dark) {")
 	if !ok {
 		t.Fatalf("no dark-mode block:\n%s", css)
+	}
+	if !strings.HasSuffix(strings.TrimSpace(light), "}") {
+		t.Errorf("light-mode block not closed:\n%s", light)
 	}
 	if !strings.HasSuffix(dark, "}\n") {
 		t.Errorf("dark-mode block not closed:\n%s", dark)

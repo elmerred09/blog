@@ -141,7 +141,7 @@ func TestReplaceTagsForPost(t *testing.T) {
 		return out
 	}
 
-	// replace runs the importer's link update in a transaction and checks how
+	// replace runs tags.Link's link update in a transaction and checks how
 	// many stale links DeleteTagsForPostExcept removed and SetTagsForPost added.
 	replace := func(t *testing.T, tagIDs []int32, wantRemoved, wantAdded int64, commit bool) {
 		t.Helper()

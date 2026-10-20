@@ -9,7 +9,7 @@ func TestRunCSS(t *testing.T) {
 	t.Parallel()
 
 	var out strings.Builder
-	if err := run(t.Context(), []string{"css"}, &out); err != nil {
+	if err := run([]string{"css"}, &out); err != nil {
 		t.Fatalf("run css: %v", err)
 	}
 	if !strings.HasPrefix(out.String(), cssHeader) {
@@ -24,7 +24,7 @@ func TestRunCSSRejectsArguments(t *testing.T) {
 	t.Parallel()
 
 	var out strings.Builder
-	err := run(t.Context(), []string{"css", "web/app/chroma.css"}, &out)
+	err := run([]string{"css", "web/app/chroma.css"}, &out)
 	if err == nil || !strings.Contains(err.Error(), "takes no arguments") {
 		t.Fatalf("err = %v, want a takes-no-arguments error", err)
 	}

@@ -34,8 +34,7 @@ if err != nil {
 
 - No global mutable state or `init()` side effects. Pass dependencies explicitly (constructors).
 - Keep interfaces small and define them consumer-side by default (e.g. the post repository). Provider-side is intended only when there are multiple implementations, like `search.Searcher` (Postgres now, Elasticsearch later); don't move it.
-- Group packages by domain (`content`, `post`, `search`, `tags`), not by layer.
-- `internal/content` (markdown-file parsing and the import) is for `cmd/blogctl` only; depguard enforces it. Code the API also needs lives in shared packages: `internal/render` (markdown to HTML), `internal/slug`, and `internal/tags` (tag writes and the tag list).
+- Group packages by domain (`post`, `admin`, `search`, `tags`), not by layer. Shared pieces get their own small package: `internal/render` (markdown to HTML), `internal/slug`, and `internal/tags` (tag writes and the tag list).
 - `internal/post` is the read side for posts. Post writes go in `internal/admin`, so the public API's package stays read-only.
 - `internal/tags` owns tags, reads and writes. The write helpers (`Ensure`, `Link`) take the caller's `*db.Queries` so they join its transaction. Reads go through `tags.Store`; `Store.List` takes a `Scope`, and which tags the public may see (`Published`) is decided in the `ListTags` query, not by callers.
 - `httpapi` gets services or interfaces in `Deps`, never a raw `*db.Queries`.

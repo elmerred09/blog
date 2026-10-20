@@ -1,31 +1,3 @@
--- name: UpsertPost :one
--- index: posts_slug_key (unique on slug).
-INSERT INTO posts (slug, title, summary, body_md, body_html, published_at)
-VALUES (
-  sqlc.arg(slug),
-  sqlc.arg(title),
-  sqlc.arg(summary),
-  sqlc.arg(body_md),
-  sqlc.arg(body_html),
-  sqlc.arg(published_at)
-)
-ON CONFLICT (slug) DO UPDATE
-SET
-  title = EXCLUDED.title,
-  summary = EXCLUDED.summary,
-  body_md = EXCLUDED.body_md,
-  body_html = EXCLUDED.body_html,
-  published_at = EXCLUDED.published_at,
-  deleted_at = NULL,
-  updated_at = CURRENT_TIMESTAMP
-WHERE (
-    (posts.title, posts.summary, posts.body_md, posts.body_html, posts.published_at)
-    IS DISTINCT FROM
-    (EXCLUDED.title, EXCLUDED.summary, EXCLUDED.body_md, EXCLUDED.body_html, EXCLUDED.published_at)
-  )
-  OR posts.deleted_at IS NOT NULL
-RETURNING id, (old.id IS NULL)::boolean AS created;
-
 -- name: GetPostBySlug :one
 -- index: posts_slug_key (unique on slug).
 SELECT id, slug, title, summary, body_html, published_at, deleted_at, created_at, updated_at
@@ -33,13 +5,6 @@ FROM posts
 WHERE slug = sqlc.arg(slug)
     AND published_at <= CURRENT_TIMESTAMP
     AND deleted_at IS NULL
-LIMIT 1;
-
--- name: GetPostIDBySlug :one
--- index: posts_slug_key (unique on slug).
-SELECT id
-FROM posts
-WHERE slug = sqlc.arg(slug)
 LIMIT 1;
 
 -- name: ListPosts :many

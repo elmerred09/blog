@@ -12,22 +12,6 @@ linters:
     - noctx
     - errorlint
     - misspell
-    - depguard
-  settings:
-    depguard:
-      rules:
-        # internal/content is markdown-file ingestion (frontmatter, YAML,
-        # the import transaction) for blogctl. Rendering, slugs, and tag
-        # writes live in internal/render, internal/slug, and internal/tags,
-        # which the API may use.
-        content-is-blogctl-only:
-          files:
-            - "$all"
-            - "!**/cmd/blogctl/**"
-            - "!**/internal/content/**"
-          deny:
-            - pkg: github.com/elmerred09/blog/internal/content
-              desc: ingestion is blogctl-only; use internal/render, internal/slug, or internal/tags
 
 formatters:
   enable:

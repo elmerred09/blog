@@ -61,3 +61,10 @@ export default async function Posts() {
 - Treat `updated_at` as an opaque string: pass it back exactly as loaded. Never put it through `new Date()` or `toISOString()`; that drops the microseconds and every save becomes a 409.
 - Server actions take plain objects, not `FormData`, and check their argument's shape at runtime (`lib/admin/input.ts`): an action is a public POST endpoint, and TypeScript types don't reach the wire. Content rules stay in the API.
 - After a write, expire the caches that render it with `updateTag`: `posts` and `post:<slug>`, plus `post:<old slug>` on a rename.
+
+## Editor
+
+- The editor loads only in the browser (`components/admin/post-editor-loader.tsx`, `next/dynamic` with `ssr: false`): Tiptap can't render on the server, and the publish controls show the author's local time. Keep local-time rendering inside client-only components, or the server's UTC HTML mismatches on hydration.
+- Every editor extension needs a markdown form goldmark renders; `lib/admin/editor-extensions.ts` is the one list, and its test checks each toolbar feature's markdown. Underline is off for that reason. Tiptap packages are pinned to one exact version (their peer dependencies require it); upgrade them together.
+- Next keeps up to three visited routes mounted but hidden (`<Activity>`), with their state. Forms that create something must reset after success when hidden (`useLayoutEffect` cleanup, as `PostEditor` does), or revisiting the page shows a form still bound to the created record. See `docs/01-app/02-guides/preserving-ui-state.md`.
+- Tiptap's markdown output escapes more than needed (`&amp;`, `\*`, `\_`) and drops inline raw HTML tags. Goldmark renders the same HTML, and Postgres's parser ignores `&amp;` (an `entity` token) and the backslashes, so search is unaffected.

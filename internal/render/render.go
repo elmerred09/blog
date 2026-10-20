@@ -50,8 +50,10 @@ func (r *Renderer) Render(src []byte) (string, error) {
 	return buf.String(), nil
 }
 
-// WriteCSS writes the stylesheet for the classes Render emits: the light
-// theme, then the dark theme inside a prefers-color-scheme: dark block.
+// WriteCSS writes the stylesheet for the classes Render emits: the light and
+// dark themes, each inside its own prefers-color-scheme block. The themes
+// style different sets of classes, so an unscoped light theme would leak its
+// colors into dark mode wherever the dark theme sets none.
 func WriteCSS(w io.Writer) error {
 	light, err := style(lightStyle)
 	if err != nil {
@@ -64,10 +66,11 @@ func WriteCSS(w io.Writer) error {
 
 	f := chromahtml.New(formatOptions()...)
 	var buf bytes.Buffer
+	buf.WriteString("@media (prefers-color-scheme: light) {\n")
 	if err := f.WriteCSS(&buf, light); err != nil {
 		return fmt.Errorf("write %s css: %w", lightStyle, err)
 	}
-	buf.WriteString("\n@media (prefers-color-scheme: dark) {\n")
+	buf.WriteString("}\n\n@media (prefers-color-scheme: dark) {\n")
 	if err := f.WriteCSS(&buf, dark); err != nil {
 		return fmt.Errorf("write %s css: %w", darkStyle, err)
 	}

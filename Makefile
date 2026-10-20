@@ -19,6 +19,10 @@ GOOSE := $(GO) tool goose
 GOOSE_DRIVER := postgres
 GOOSE_MIGRATION_DIR := db/migrations
 GOOSE_DBSTRING ?= postgres://blog:blog@localhost:5432/blog?sslmode=disable
+# goose gets its settings only from the environment. Make exports a
+# GOOSE_DBSTRING given on its command line, and goose inserts an exported one
+# into its arguments, so also passing the DSN as an argument would duplicate it.
+GOOSE_RUN = GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING='$(GOOSE_DBSTRING)' GOOSE_MIGRATION_DIR=$(GOOSE_MIGRATION_DIR) $(GOOSE)
 
 # Seed file for `make seed`: a name in db/seed without the .sql suffix, e.g. SEED=posts-tags.
 SEED_DIR := db/seed
@@ -27,9 +31,6 @@ SEED ?= posts-tags
 # Files for fmt targets; override with FILES="a.go b.go".
 # Note: FILES is expanded unquoted, so paths containing spaces are unsupported.
 FILES ?= .
-
-# Paths for `make import`, e.g. POSTS="content/a.md content/".
-POSTS ?=
 
 WEB := web
 PRETTIER := ./node_modules/.bin/prettier
@@ -40,7 +41,7 @@ API_URL ?= http://localhost:8080
 # Files for web-fmt, relative to web/ or absolute; override with WEB_FILES="app/page.tsx".
 WEB_FILES ?= .
 
-.PHONY: sqlc sqlc-check lint fmt fmt-check test deps-check hooks migrate migrate-down migrate-status migrate-new up down restart seed import api admin-keys node-check \
+.PHONY: sqlc sqlc-check lint fmt fmt-check test deps-check hooks migrate migrate-down migrate-status migrate-new up down restart seed api admin-keys node-check \
 	web-install web-deps web web-build web-lint web-typecheck web-fmt web-fmt-check web-test web-types web-types-check web-check \
 	chroma-css chroma-css-check
 
@@ -55,16 +56,16 @@ restart:
 	docker compose up -d
 
 migrate:
-	$(GOOSE) $(GOOSE_DRIVER) -dir $(GOOSE_MIGRATION_DIR) $(GOOSE_DBSTRING) up
+	$(GOOSE_RUN) up
 
 migrate-down:
-	$(GOOSE) $(GOOSE_DRIVER) -dir $(GOOSE_MIGRATION_DIR) $(GOOSE_DBSTRING) down
+	$(GOOSE_RUN) down
 
 migrate-status:
-	$(GOOSE) $(GOOSE_DRIVER) -dir $(GOOSE_MIGRATION_DIR) $(GOOSE_DBSTRING) status
+	$(GOOSE_RUN) status
 
 migrate-new:
-	$(GOOSE) $(GOOSE_DRIVER) -dir $(GOOSE_MIGRATION_DIR) $(GOOSE_DBSTRING) create $(NAME) sql
+	$(GOOSE_RUN) create $(NAME) sql
 
 seed:
 	@if [ -z "$(SEED)" ] || [ ! -f "$(SEED_DIR)/$(SEED).sql" ]; then \
@@ -82,10 +83,6 @@ api:
 # Writes the gitignored .env and web/.env.local; see scripts/admin-keys.sh.
 admin-keys:
 	@scripts/admin-keys.sh "$(ADMIN_GITHUB_ID)"
-
-import:
-	@if [ -z "$(POSTS)" ]; then echo 'usage: make import POSTS="content/a.md content/"'; exit 2; fi
-	DATABASE_URL="$(GOOSE_DBSTRING)" $(GO) run ./cmd/blogctl import $(POSTS)
 
 # Written to a temp file first, so a failed run doesn't leave a truncated stylesheet.
 chroma-css:

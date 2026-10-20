@@ -493,7 +493,7 @@ components:
           items:
             $ref: "#/components/schemas/Tag"
         body_html:
-          description: Rendered by the importer; raw HTML in the markdown source is escaped.
+          description: Rendered from the markdown when the post is saved; raw HTML in the markdown source is escaped.
           type: string
         updated_at:
           type: string

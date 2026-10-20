@@ -128,21 +128,6 @@ func (q *Queries) GetPostBySlug(ctx context.Context, slug string) (GetPostBySlug
 	return i, err
 }
 
-const getPostIDBySlug = `-- name: GetPostIDBySlug :one
-SELECT id
-FROM posts
-WHERE slug = $1
-LIMIT 1
-`
-
-// index: posts_slug_key (unique on slug).
-func (q *Queries) GetPostIDBySlug(ctx context.Context, slug string) (uuid.UUID, error) {
-	row := q.db.QueryRow(ctx, getPostIDBySlug, slug)
-	var id uuid.UUID
-	err := row.Scan(&id)
-	return id, err
-}
-
 const listAdminPosts = `-- name: ListAdminPosts :many
 SELECT id, slug, title, published_at, updated_at
 FROM posts
@@ -316,62 +301,5 @@ func (q *Queries) UpdatePost(ctx context.Context, arg UpdatePostParams) (UpdateP
 	)
 	var i UpdatePostRow
 	err := row.Scan(&i.Found, &i.UpdatedAt)
-	return i, err
-}
-
-const upsertPost = `-- name: UpsertPost :one
-INSERT INTO posts (slug, title, summary, body_md, body_html, published_at)
-VALUES (
-  $1,
-  $2,
-  $3,
-  $4,
-  $5,
-  $6
-)
-ON CONFLICT (slug) DO UPDATE
-SET
-  title = EXCLUDED.title,
-  summary = EXCLUDED.summary,
-  body_md = EXCLUDED.body_md,
-  body_html = EXCLUDED.body_html,
-  published_at = EXCLUDED.published_at,
-  deleted_at = NULL,
-  updated_at = CURRENT_TIMESTAMP
-WHERE (
-    (posts.title, posts.summary, posts.body_md, posts.body_html, posts.published_at)
-    IS DISTINCT FROM
-    (EXCLUDED.title, EXCLUDED.summary, EXCLUDED.body_md, EXCLUDED.body_html, EXCLUDED.published_at)
-  )
-  OR posts.deleted_at IS NOT NULL
-RETURNING id, (old.id IS NULL)::boolean AS created
-`
-
-type UpsertPostParams struct {
-	Slug        string
-	Title       string
-	Summary     string
-	BodyMd      string
-	BodyHtml    string
-	PublishedAt *time.Time
-}
-
-type UpsertPostRow struct {
-	ID      uuid.UUID
-	Created bool
-}
-
-// index: posts_slug_key (unique on slug).
-func (q *Queries) UpsertPost(ctx context.Context, arg UpsertPostParams) (UpsertPostRow, error) {
-	row := q.db.QueryRow(ctx, upsertPost,
-		arg.Slug,
-		arg.Title,
-		arg.Summary,
-		arg.BodyMd,
-		arg.BodyHtml,
-		arg.PublishedAt,
-	)
-	var i UpsertPostRow
-	err := row.Scan(&i.ID, &i.Created)
 	return i, err
 }
