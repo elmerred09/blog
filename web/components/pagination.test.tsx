@@ -11,6 +11,13 @@ describe("Pagination", () => {
     expect(link.getAttribute("href")).toBe("/?cursor=MjAyNi0xMC0wMQ");
   });
 
+  it("links within another list", () => {
+    render(<Pagination nextCursor="abc" pathname="/admin" />);
+
+    const link = screen.getByRole("link", { name: "Older posts" });
+    expect(link.getAttribute("href")).toBe("/admin?cursor=abc");
+  });
+
   it("URL-encodes the cursor", () => {
     const cursor = "a+b/c==";
     render(<Pagination nextCursor={cursor} />);

@@ -1,6 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { formatDate } from "@/lib/format";
+import { formatDate, formatDateTime } from "@/lib/format";
+
+describe("formatDateTime", () => {
+  it("formats in UTC and says so", () => {
+    vi.stubEnv("TZ", "Pacific/Auckland");
+
+    expect(formatDateTime("2026-10-18T16:05:59.123456Z")).toBe(
+      "Oct 18, 2026, 4:05 PM UTC",
+    );
+  });
+});
 
 describe("formatDate", () => {
   it.each([

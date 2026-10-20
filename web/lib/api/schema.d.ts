@@ -222,7 +222,7 @@ export interface components {
             published_at: string;
             /** @description Sorted by slug. Empty, never null, for an untagged post. */
             tags: components["schemas"]["Tag"][];
-            /** @description Rendered by the importer; raw HTML in the markdown source is escaped. */
+            /** @description Rendered from the markdown when the post is saved; raw HTML in the markdown source is escaped. */
             body_html: string;
             /** Format: date-time */
             updated_at: string;

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 
 import { requireAdmin } from "@/lib/admin/session";
@@ -17,7 +18,9 @@ export default function AdminLayout({ children }: LayoutProps<"/admin">) {
   return (
     <>
       <div className="mb-8 flex items-center justify-between border-b border-zinc-200 pb-4 text-sm dark:border-zinc-800">
-        <span className="font-medium">Editor</span>
+        <Link href="/admin" className="font-medium">
+          Editor
+        </Link>
         <Suspense fallback={null}>
           <AdminBar />
         </Suspense>
