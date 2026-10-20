@@ -24,6 +24,11 @@ GOOSE_DBSTRING ?= postgres://blog:blog@localhost:5432/blog?sslmode=disable
 # into its arguments, so also passing the DSN as an argument would duplicate it.
 GOOSE_RUN = GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING='$(GOOSE_DBSTRING)' GOOSE_MIGRATION_DIR=$(GOOSE_MIGRATION_DIR) $(GOOSE)
 
+# The Playwright suite's own database in the compose Postgres; make e2e-db
+# recreates it on every run.
+E2E_DB := blog_e2e
+E2E_DBSTRING := postgres://blog:blog@localhost:5432/$(E2E_DB)?sslmode=disable
+
 # Seed file for `make seed`: a name in db/seed without the .sql suffix, e.g. SEED=posts-tags.
 SEED_DIR := db/seed
 SEED ?= posts-tags
@@ -41,7 +46,7 @@ API_URL ?= http://localhost:8080
 # Files for web-fmt, relative to web/ or absolute; override with WEB_FILES="app/page.tsx".
 WEB_FILES ?= .
 
-.PHONY: sqlc sqlc-check lint fmt fmt-check test deps-check hooks migrate migrate-down migrate-status migrate-new up down restart seed api admin-keys node-check \
+.PHONY: sqlc sqlc-check lint fmt fmt-check test deps-check hooks migrate migrate-down migrate-status migrate-new up down restart seed e2e-db api admin-keys node-check \
 	web-install web-deps web web-build web-lint web-typecheck web-fmt web-fmt-check web-test web-types web-types-check web-check \
 	chroma-css chroma-css-check
 
@@ -75,6 +80,16 @@ seed:
 		exit 1; \
 	fi
 	docker compose exec -T postgres psql "$(GOOSE_DBSTRING)" -v ON_ERROR_STOP=1 < $(SEED_DIR)/$(SEED).sql
+
+# Drops and recreates the E2E database, with the extensions db/init gives the
+# dev one, then migrates it. Runs before Playwright starts the API, so nothing
+# holds a connection; FORCE still ends any left by an earlier run.
+e2e-db: GOOSE_DBSTRING = $(E2E_DBSTRING)
+e2e-db:
+	docker compose exec -T postgres psql -U blog -d postgres -v ON_ERROR_STOP=1 -q \
+		-c 'DROP DATABASE IF EXISTS $(E2E_DB) WITH (FORCE)' -c 'CREATE DATABASE $(E2E_DB)'
+	docker compose exec -T postgres psql -U blog -d $(E2E_DB) -v ON_ERROR_STOP=1 -q < db/init/01-extensions.sql
+	$(GOOSE_RUN) up
 
 api:
 	@set -a; [ -f .env ] && . ./.env; set +a; \
