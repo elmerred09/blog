@@ -47,7 +47,8 @@ export default defineConfig({
       cwd: "..",
       env: env.api,
       url: `${env.web.API_URL}/readyz`,
-      timeout: 120_000,
+      // go run compiles first, which is slow on a cold CI cache.
+      timeout: 180_000,
       stdout: "pipe",
       gracefulShutdown: { signal: "SIGTERM", timeout: 5_000 },
     },

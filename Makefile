@@ -28,6 +28,10 @@ GOOSE_RUN = GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING='$(GOOSE_DBSTRING)' GOOS
 # recreates it on every run.
 E2E_DB := blog_e2e
 E2E_DBSTRING := postgres://blog:blog@localhost:5432/$(E2E_DB)?sslmode=disable
+# Extra arguments for playwright test, e.g. E2E_ARGS="admin-editor --headed".
+E2E_ARGS ?=
+# Extra flags for playwright install; CI adds --with-deps.
+E2E_INSTALL_FLAGS ?=
 
 # Seed file for `make seed`: a name in db/seed without the .sql suffix, e.g. SEED=posts-tags.
 SEED_DIR := db/seed
@@ -46,7 +50,7 @@ API_URL ?= http://localhost:8080
 # Files for web-fmt, relative to web/ or absolute; override with WEB_FILES="app/page.tsx".
 WEB_FILES ?= .
 
-.PHONY: sqlc sqlc-check lint fmt fmt-check test deps-check hooks migrate migrate-down migrate-status migrate-new up down restart seed e2e-db api admin-keys node-check \
+.PHONY: sqlc sqlc-check lint fmt fmt-check test deps-check hooks migrate migrate-down migrate-status migrate-new up down restart seed e2e-db e2e-install e2e e2e-ui api admin-keys node-check \
 	web-install web-deps web web-build web-lint web-typecheck web-fmt web-fmt-check web-test web-types web-types-check web-check \
 	chroma-css chroma-css-check
 
@@ -90,6 +94,23 @@ e2e-db:
 		-c 'DROP DATABASE IF EXISTS $(E2E_DB) WITH (FORCE)' -c 'CREATE DATABASE $(E2E_DB)'
 	docker compose exec -T postgres psql -U blog -d $(E2E_DB) -v ON_ERROR_STOP=1 -q < db/init/01-extensions.sql
 	$(GOOSE_RUN) up
+
+# Playwright's Chromium. On a distro Playwright doesn't support, such as
+# Ubuntu 20.04, set PLAYWRIGHT_HOST_PLATFORM_OVERRIDE=ubuntu22.04-x64.
+e2e-install: web-deps
+	cd $(WEB) && ./node_modules/.bin/playwright install $(E2E_INSTALL_FLAGS) chromium
+
+# The end-to-end suite against a fresh blog_e2e, with fresh keys. Playwright
+# starts the API on :8081 and a production Next build on :3100 itself, so a
+# dev stack can keep running. Needs make up and make e2e-install first.
+e2e: web-deps e2e-db
+	scripts/e2e-env.sh '$(E2E_DBSTRING)'
+	cd $(WEB) && ./node_modules/.bin/playwright test $(E2E_ARGS)
+
+# The same, in Playwright's UI mode.
+e2e-ui: web-deps e2e-db
+	scripts/e2e-env.sh '$(E2E_DBSTRING)'
+	cd $(WEB) && ./node_modules/.bin/playwright test --ui $(E2E_ARGS)
 
 api:
 	@set -a; [ -f .env ] && . ./.env; set +a; \
