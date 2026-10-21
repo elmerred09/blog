@@ -1,5 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
+import { ADMIN_STORAGE_STATE } from "./e2e/auth";
 import { readE2EEnv } from "./e2e/env";
 
 const env = readE2EEnv();
@@ -18,10 +19,25 @@ export default defineConfig({
   },
   projects: [
     { name: "fixtures", testMatch: /fixtures\.setup\.ts$/ },
+    // After fixtures, so no browser request reaches the app before the
+    // posts exist.
     {
-      name: "chromium",
+      name: "auth",
+      testMatch: /auth\.setup\.ts$/,
       use: { ...devices["Desktop Chrome"] },
       dependencies: ["fixtures"],
+    },
+    {
+      name: "public",
+      testMatch: /(public|search)\.spec\.ts$/,
+      use: { ...devices["Desktop Chrome"] },
+      dependencies: ["fixtures"],
+    },
+    {
+      name: "admin",
+      testMatch: /admin-.*\.spec\.ts$/,
+      use: { ...devices["Desktop Chrome"], storageState: ADMIN_STORAGE_STATE },
+      dependencies: ["auth"],
     },
   ],
   webServer: [

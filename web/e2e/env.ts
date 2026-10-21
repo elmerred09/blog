@@ -55,6 +55,12 @@ export function readE2EEnv(): E2EEnv {
   return env;
 }
 
+// adminGithubId is the allowed GitHub id the suite signs in and signs API
+// tokens as.
+export function adminGithubId(env: E2EEnv): string {
+  return env.web.ADMIN_GITHUB_IDS.split(",")[0].trim();
+}
+
 function pick<K extends string>(
   vars: Record<string, string | undefined>,
   keys: readonly K[],

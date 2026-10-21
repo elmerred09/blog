@@ -2,7 +2,7 @@ import type { APIRequestContext } from "@playwright/test";
 import { importPKCS8, SignJWT } from "jose";
 
 import type { components } from "../lib/api/schema";
-import type { E2EEnv } from "./env";
+import { adminGithubId, type E2EEnv } from "./env";
 
 export type FixturePost = components["schemas"]["AdminPostInput"];
 type AdminPost = components["schemas"]["AdminPost"];
@@ -104,7 +104,6 @@ export const ALL_FIXTURES: FixturePost[] = [
 // That module can't be imported here: its server-only guard throws outside
 // Next's server build.
 export async function adminToken(env: E2EEnv): Promise<string> {
-  const githubId = env.web.ADMIN_GITHUB_IDS.split(",")[0].trim();
   const key = await importPKCS8(
     env.web.ADMIN_JWT_PRIVATE_KEY.replaceAll("\\n", "\n"),
     "EdDSA",
@@ -114,7 +113,7 @@ export async function adminToken(env: E2EEnv): Promise<string> {
     .setProtectedHeader({ alg: "EdDSA", typ: "JWT" })
     .setIssuer("blog-web")
     .setAudience("blog-api")
-    .setSubject(`github:${githubId}`)
+    .setSubject(`github:${adminGithubId(env)}`)
     .setIssuedAt(iat)
     .setExpirationTime(iat + 120)
     .sign(key);

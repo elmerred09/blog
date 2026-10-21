@@ -1,3 +1,6 @@
+import path from "node:path";
+
+import type { BrowserContext } from "@playwright/test";
 import { makeSignature, symmetricEncodeJWT } from "better-auth/crypto";
 
 // Session cookies for an admin, built the way Better Auth 1.7.10 builds them
@@ -13,6 +16,15 @@ import { makeSignature, symmetricEncodeJWT } from "better-auth/crypto";
 export const SESSION_TOKEN_COOKIE = "better-auth.session_token";
 export const SESSION_DATA_COOKIE = "better-auth.session_data";
 
+// The admin project's storageState, written by auth.setup.ts.
+export const ADMIN_STORAGE_STATE = path.join(__dirname, ".auth", "admin.json");
+
+// The name in the minted user, which the admin bar shows once signed in.
+export const ADMIN_NAME = "E2E Admin";
+
+export const VERSION_GUARD_MESSAGE =
+  "a minted admin session didn't sign in; Better Auth's cookie format may have changed (better-auth upgrade?): update e2e/auth.ts";
+
 export type SessionCookie = {
   name: string;
   value: string;
@@ -23,7 +35,7 @@ export type SessionCookie = {
 export async function mintSessionCookies({
   secret,
   githubId,
-  name = "E2E Admin",
+  name = ADMIN_NAME,
   maxAgeSeconds = 60 * 60,
   now = new Date(),
 }: {
@@ -81,4 +93,24 @@ export async function mintSessionCookies({
       expires,
     },
   ];
+}
+
+// addSessionCookies puts cookies on context for baseURL's host, with the
+// attributes Better Auth gives its own over http.
+export async function addSessionCookies(
+  context: BrowserContext,
+  baseURL: string,
+  cookies: SessionCookie[],
+): Promise<void> {
+  const domain = new URL(baseURL).hostname;
+  await context.addCookies(
+    cookies.map((cookie) => ({
+      ...cookie,
+      domain,
+      path: "/",
+      httpOnly: true,
+      secure: false,
+      sameSite: "Lax" as const,
+    })),
+  );
 }
