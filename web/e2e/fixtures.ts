@@ -1,4 +1,4 @@
-import type { APIRequestContext } from "@playwright/test";
+import type { APIRequestContext, APIResponse } from "@playwright/test";
 import { importPKCS8, SignJWT } from "jose";
 
 import type { components } from "../lib/api/schema";
@@ -126,6 +126,34 @@ function expectedState(post: FixturePost): AdminPost["state"] {
   return Date.parse(post.published_at) > Date.now() ? "scheduled" : "published";
 }
 
+async function postAdminPost(
+  request: APIRequestContext,
+  env: E2EEnv,
+  post: FixturePost,
+): Promise<APIResponse> {
+  return request.post(`${env.web.API_URL}/api/v1/admin/posts`, {
+    headers: { authorization: `Bearer ${await adminToken(env)}` },
+    data: post,
+  });
+}
+
+// createPost creates a post through the admin API, as a spec's starting
+// point. Unlike a save in the editor, it doesn't expire Next's caches, so
+// the post's public pages must not have been requested before.
+export async function createPost(
+  request: APIRequestContext,
+  env: E2EEnv,
+  post: FixturePost,
+): Promise<AdminPost> {
+  const res = await postAdminPost(request, env, post);
+  if (res.status() !== 201) {
+    throw new Error(
+      `creating post ${post.slug}: ${res.status()} ${await res.text()}`,
+    );
+  }
+  return (await res.json()) as AdminPost;
+}
+
 // createFixture creates the post through the admin API. It returns false when
 // the slug is already taken, which means an earlier run created it against
 // a database that wasn't reset (a rerun without make e2e).
@@ -134,10 +162,7 @@ export async function createFixture(
   env: E2EEnv,
   post: FixturePost,
 ): Promise<boolean> {
-  const res = await request.post(`${env.web.API_URL}/api/v1/admin/posts`, {
-    headers: { authorization: `Bearer ${await adminToken(env)}` },
-    data: post,
-  });
+  const res = await postAdminPost(request, env, post);
   if (res.status() === 201) {
     const { state } = (await res.json()) as AdminPost;
     const want = expectedState(post);
