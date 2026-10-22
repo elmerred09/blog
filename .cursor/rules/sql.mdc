@@ -50,6 +50,8 @@ Post state comes from timestamps; there is no `status` column. Draft: `published
 
 The index is partial, so a query uses it only if its `WHERE` implies the index predicate. Always include `deleted_at IS NULL`; `published_at <= now()` already implies `published_at IS NOT NULL`. Keep `now()` in the query, never in an index predicate (index predicates must be immutable). Use `sqlc.narg` for the optional cursor so callers pass NULL for page 1; the sentinel lives in the SQL, not in Go. Never wrap an indexable condition in `param IS NULL OR ...`: check with a generic plan (`SET plan_cache_mode = force_generic_plan` plus `PREPARE`/`EXECUTE`) that it stays an `Index Cond`.
 
+A newer page is the same keyset in the other direction: flip the comparison and the `ORDER BY`, fetch one extra row, and reverse the rows in Go so the page stays newest first. Keep it a second query. A direction parameter (`ORDER BY CASE`) sorts instead of scanning the index. `posts_pagination_idx` is `(published_at DESC, id DESC)`, so the ascending query scans it backward, and `published_at <= now()` still ends that scan. A backward page always has a cursor, so its arguments are `sqlc.arg`, with no NULL sentinel.
+
 ## Search
 
 - Use `websearch_to_tsquery`, rank with `ts_rank_cd`.

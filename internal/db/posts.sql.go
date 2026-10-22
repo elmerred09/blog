@@ -177,6 +177,55 @@ func (q *Queries) ListAdminPosts(ctx context.Context, arg ListAdminPostsParams) 
 	return items, nil
 }
 
+const listAdminPostsBefore = `-- name: ListAdminPostsBefore :many
+SELECT id, slug, title, published_at, updated_at
+FROM posts
+WHERE deleted_at IS NULL
+  AND id > $1
+ORDER BY id ASC
+LIMIT $2
+`
+
+type ListAdminPostsBeforeParams struct {
+	BeforeID uuid.UUID
+	PageSize int32
+}
+
+type ListAdminPostsBeforeRow struct {
+	ID          uuid.UUID
+	Slug        string
+	Title       string
+	PublishedAt *time.Time
+	UpdatedAt   time.Time
+}
+
+// index: posts_pkey (id), scanned forward from before_id. The caller reverses the rows.
+func (q *Queries) ListAdminPostsBefore(ctx context.Context, arg ListAdminPostsBeforeParams) ([]ListAdminPostsBeforeRow, error) {
+	rows, err := q.db.Query(ctx, listAdminPostsBefore, arg.BeforeID, arg.PageSize)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAdminPostsBeforeRow
+	for rows.Next() {
+		var i ListAdminPostsBeforeRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Slug,
+			&i.Title,
+			&i.PublishedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPosts = `-- name: ListPosts :many
 SELECT id, slug, title, summary, published_at
 FROM posts
@@ -214,6 +263,62 @@ func (q *Queries) ListPosts(ctx context.Context, arg ListPostsParams) ([]ListPos
 	var items []ListPostsRow
 	for rows.Next() {
 		var i ListPostsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Slug,
+			&i.Title,
+			&i.Summary,
+			&i.PublishedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPostsBefore = `-- name: ListPostsBefore :many
+SELECT id, slug, title, summary, published_at
+FROM posts
+WHERE published_at <= CURRENT_TIMESTAMP
+  AND deleted_at IS NULL
+  AND (published_at, id) > (
+    $1::timestamptz,
+    $2::uuid
+  )
+ORDER BY published_at ASC, id ASC
+LIMIT $3
+`
+
+type ListPostsBeforeParams struct {
+	BeforePublishedAt time.Time
+	BeforeID          uuid.UUID
+	PageSize          int32
+}
+
+type ListPostsBeforeRow struct {
+	ID          uuid.UUID
+	Slug        string
+	Title       string
+	Summary     string
+	PublishedAt *time.Time
+}
+
+// index: posts_pagination_idx (published_at DESC, id DESC) WHERE published_at IS NOT NULL AND deleted_at IS NULL,
+// scanned backward: ASC is the reverse of the index order. The caller reverses the rows.
+// A backward page always has a cursor, so the comparison needs no NULL sentinel.
+func (q *Queries) ListPostsBefore(ctx context.Context, arg ListPostsBeforeParams) ([]ListPostsBeforeRow, error) {
+	rows, err := q.db.Query(ctx, listPostsBefore, arg.BeforePublishedAt, arg.BeforeID, arg.PageSize)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPostsBeforeRow
+	for rows.Next() {
+		var i ListPostsBeforeRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Slug,
