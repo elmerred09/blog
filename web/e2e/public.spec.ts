@@ -49,6 +49,58 @@ test("the posts list pages through every published fixture, newest first", async
   expect(titles).not.toContain(SCHEDULED_POST.title);
 });
 
+const FIXTURE_TITLES = new Set(PUBLISHED_FIXTURES.map((post) => post.title));
+
+// fixtureTitlesOn is the fixture posts on the current page, in list order.
+// Posts the admin specs publish are newer than every fixture, so they only
+// ever land on the first page and are left out of the comparison.
+async function fixtureTitlesOn(page: Page): Promise<string[]> {
+  return (await listedTitles(page)).filter((title) =>
+    FIXTURE_TITLES.has(title),
+  );
+}
+
+test("Newer posts walks back to the first page", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("link", { name: "Newer posts" })).toHaveCount(0);
+
+  const forward: string[][] = [];
+  for (let n = 1; ; n++) {
+    forward.push(await fixtureTitlesOn(page));
+    const older = page.getByRole("link", { name: "Older posts" });
+    if ((await older.count()) === 0) {
+      break;
+    }
+    expect(n, "too many pages; is the cursor advancing?").toBeLessThan(
+      MAX_PAGES,
+    );
+    await page.goto((await older.getAttribute("href"))!);
+  }
+  expect(forward.length).toBeGreaterThan(1);
+  await expect(page.getByRole("link", { name: "Newer posts" })).toBeVisible();
+
+  const back: string[][] = [];
+  for (let n = 1; ; n++) {
+    const newer = page.getByRole("link", { name: "Newer posts" });
+    if ((await newer.count()) === 0) {
+      break;
+    }
+    expect(n, "too many pages; is the cursor advancing?").toBeLessThan(
+      MAX_PAGES,
+    );
+    await page.goto((await newer.getAttribute("href"))!);
+    back.push(await fixtureTitlesOn(page));
+  }
+
+  // Every page but the first and the last is a fixed keyset slice. The first
+  // page can gain posts published while this ran, which only pushes fixtures
+  // down, so the returned first page's fixtures are a prefix of the original.
+  const stable = forward.slice(1, -1).toReversed();
+  expect(back.slice(0, stable.length)).toEqual(stable);
+  const returned = back[back.length - 1];
+  expect(forward[0].slice(0, returned.length)).toEqual(returned);
+});
+
 test("a post page shows its metadata and highlighted code", async ({
   page,
 }) => {

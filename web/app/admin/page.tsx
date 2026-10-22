@@ -45,7 +45,11 @@ async function AdminPosts({
   return (
     <>
       <AdminPostList posts={page.items} />
-      <Pagination nextCursor={page.next_cursor} pathname="/admin" />
+      <Pagination
+        prevCursor={page.prev_cursor}
+        nextCursor={page.next_cursor}
+        pathname="/admin"
+      />
     </>
   );
 }
