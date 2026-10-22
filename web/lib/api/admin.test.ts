@@ -141,6 +141,7 @@ describe("listAdminPosts", () => {
       },
     ],
     next_cursor: null,
+    prev_cursor: null,
   };
 
   it("sends limit and cursor", async () => {

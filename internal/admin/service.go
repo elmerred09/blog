@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -95,8 +96,10 @@ type ListItem struct {
 type Page struct {
 	// Items is never nil.
 	Items []ListItem
-	// Next is the cursor for the following page, or nil on the last page.
-	Next *uuid.UUID
+	// Prev is the cursor for the newer page, or nil on the first page.
+	Prev *Cursor
+	// Next is the cursor for the older page, or nil on the last page.
+	Next *Cursor
 }
 
 // Input is the editable fields of a post. TagNames are display names; they
@@ -119,8 +122,8 @@ type Update struct {
 }
 
 type ListParams struct {
-	// After is the previous page's Next, or nil for the first page.
-	After *uuid.UUID
+	// Cursor is the previous page's Prev or Next, or nil for the first page.
+	Cursor *Cursor
 	// Limit is the page size, from 1 to MaxLimit.
 	Limit int
 }
@@ -140,20 +143,52 @@ func (s *Service) List(ctx context.Context, p ListParams) (Page, error) {
 	if p.Limit < 1 || p.Limit > MaxLimit {
 		return Page{}, fmt.Errorf("%w: got %d", ErrInvalidLimit, p.Limit)
 	}
+	if p.Cursor != nil && p.Cursor.Direction == Before {
+		return s.listBefore(ctx, p)
+	}
+	return s.listAfter(ctx, p)
+}
 
-	rows, err := s.q.ListAdminPosts(ctx, db.ListAdminPostsParams{
-		AfterID:  p.After,
+func (s *Service) listAfter(ctx context.Context, p ListParams) (Page, error) {
+	params := db.ListAdminPostsParams{PageSize: int32(p.Limit + 1)}
+	if p.Cursor != nil {
+		params.AfterID = &p.Cursor.ID
+	}
+	rows, err := s.q.ListAdminPosts(ctx, params)
+	if err != nil {
+		return Page{}, fmt.Errorf("list posts: %w", err)
+	}
+	hasMore := len(rows) > p.Limit
+	if hasMore {
+		rows = rows[:p.Limit]
+	}
+	return s.adminPage(rows, p.Cursor != nil, hasMore), nil
+}
+
+// listBefore mirrors listAfter for the newer direction. See post.Service:
+// the rows come back oldest first and are reversed, and a short page means
+// the top has been reached, so the first page is returned instead.
+func (s *Service) listBefore(ctx context.Context, p ListParams) (Page, error) {
+	rows, err := s.q.ListAdminPostsBefore(ctx, db.ListAdminPostsBeforeParams{
+		BeforeID: p.Cursor.ID,
 		PageSize: int32(p.Limit + 1),
 	})
 	if err != nil {
 		return Page{}, fmt.Errorf("list posts: %w", err)
 	}
-
-	hasMore := len(rows) > p.Limit
-	if hasMore {
-		rows = rows[:p.Limit]
+	if len(rows) <= p.Limit {
+		return s.listAfter(ctx, ListParams{Limit: p.Limit})
 	}
+	rows = rows[:p.Limit]
+	slices.Reverse(rows)
+	items := make([]db.ListAdminPostsRow, len(rows))
+	for i, r := range rows {
+		items[i] = db.ListAdminPostsRow(r)
+	}
+	return s.adminPage(items, true, true), nil
+}
 
+func (s *Service) adminPage(rows []db.ListAdminPostsRow, withPrev, withNext bool) Page {
 	now := time.Now()
 	items := make([]ListItem, len(rows))
 	for i, r := range rows {
@@ -167,11 +202,13 @@ func (s *Service) List(ctx context.Context, p ListParams) (Page, error) {
 		}
 	}
 	page := Page{Items: items}
-	if hasMore {
-		last := rows[len(rows)-1].ID
-		page.Next = &last
+	if withPrev && len(rows) > 0 {
+		page.Prev = &Cursor{Direction: Before, ID: rows[0].ID}
 	}
-	return page, nil
+	if withNext && len(rows) > 0 {
+		page.Next = &Cursor{Direction: After, ID: rows[len(rows)-1].ID}
+	}
+	return page
 }
 
 // Get returns the post, in any state, or ErrNotFound.

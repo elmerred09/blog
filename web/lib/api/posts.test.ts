@@ -21,6 +21,7 @@ const page: Page = {
     },
   ],
   next_cursor: "MjAyNi0xMC0wMVQxMjowMDowMFp8YWJj",
+  prev_cursor: null,
 };
 
 const post: Post = {

@@ -231,6 +231,8 @@ export interface components {
             items: components["schemas"]["PostListItem"][];
             /** @description Pass as ?cursor= for the next page. Null on the last page. */
             next_cursor: string | null;
+            /** @description Pass as ?cursor= for the previous page. Null on the first page. */
+            prev_cursor: string | null;
         };
         /** @description Plain text, not HTML. Clients escape it, and highlight fragments where match is true. */
         SnippetFragment: {
@@ -275,6 +277,8 @@ export interface components {
             items: components["schemas"]["AdminPostListItem"][];
             /** @description Pass as ?cursor= for the next page. Null on the last page. */
             next_cursor: string | null;
+            /** @description Pass as ?cursor= for the previous page. Null on the first page. */
+            prev_cursor: string | null;
         };
         AdminPost: {
             /** Format: uuid */
@@ -497,7 +501,7 @@ export interface operations {
         parameters: {
             query?: {
                 limit?: number;
-                /** @description The previous page's next_cursor. Opaque; don't build or parse it. */
+                /** @description The previous page's next_cursor or prev_cursor. Opaque; don't build or parse it. */
                 cursor?: string;
             };
             header?: never;
@@ -598,7 +602,7 @@ export interface operations {
         parameters: {
             query?: {
                 limit?: number;
-                /** @description The previous page's next_cursor, a post id. Opaque; don't build or parse it. */
+                /** @description The previous page's next_cursor or prev_cursor. Opaque; don't build or parse it. */
                 cursor?: string;
             };
             header?: never;

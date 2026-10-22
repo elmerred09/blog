@@ -23,14 +23,16 @@ func TestCursorRoundTrip(t *testing.T) {
 	tests := []struct {
 		name string
 		at   time.Time
+		dir  post.Direction
 	}{
-		{"microseconds survive", time.Date(2026, 10, 1, 12, 30, 45, 123456000, time.UTC)},
-		{"whole seconds", time.Date(2026, 10, 1, 12, 30, 45, 0, time.UTC)},
-		{"non-UTC zone keeps the instant", time.Date(2026, 10, 1, 8, 30, 45, 1000, newYork)},
+		{"after, microseconds survive", time.Date(2026, 10, 1, 12, 30, 45, 123456000, time.UTC), post.After},
+		{"before, microseconds survive", time.Date(2026, 10, 1, 12, 30, 45, 123456000, time.UTC), post.Before},
+		{"whole seconds", time.Date(2026, 10, 1, 12, 30, 45, 0, time.UTC), post.After},
+		{"non-UTC zone keeps the instant", time.Date(2026, 10, 1, 8, 30, 45, 1000, newYork), post.Before},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			want := post.Cursor{PublishedAt: tc.at, ID: uuid.Must(uuid.NewV7())}
+			want := post.Cursor{Direction: tc.dir, PublishedAt: tc.at, ID: uuid.Must(uuid.NewV7())}
 
 			s := want.String()
 			if strings.ContainsAny(s, "+/=") {
@@ -41,10 +43,29 @@ func TestCursorRoundTrip(t *testing.T) {
 			if err != nil {
 				t.Fatalf("ParseCursor(%q): %v", s, err)
 			}
-			if !got.PublishedAt.Equal(want.PublishedAt) || got.ID != want.ID {
+			if got.Direction != want.Direction || !got.PublishedAt.Equal(want.PublishedAt) || got.ID != want.ID {
 				t.Errorf("round trip = %+v, want %+v", got, want)
 			}
 		})
+	}
+}
+
+func TestParseCursorLegacy(t *testing.T) {
+	t.Parallel()
+
+	const (
+		validTime = "2026-10-01T12:30:45.123456Z"
+		validID   = "01a10933-7891-7d22-8e01-7c250fa9aebf"
+	)
+	cursor := base64.RawURLEncoding.EncodeToString([]byte(validTime + "|" + validID))
+
+	got, err := post.ParseCursor(cursor)
+	if err != nil {
+		t.Fatalf("ParseCursor(%q): %v", cursor, err)
+	}
+	wantAt, _ := time.Parse(time.RFC3339Nano, validTime)
+	if got.Direction != post.After || !got.PublishedAt.Equal(wantAt) || got.ID.String() != validID {
+		t.Errorf("legacy cursor = %+v, want an After cursor at %s for %s", got, validTime, validID)
 	}
 }
 
@@ -70,6 +91,7 @@ func TestParseCursorRejects(t *testing.T) {
 		{"bad uuid", encode(validTime + "|not-a-uuid")},
 		{"non-canonical uuid", encode(validTime + "|" + strings.ReplaceAll(validID, "-", ""))},
 		{"extra field", encode(validTime + "|" + validID + "|more")},
+		{"unknown direction", encode("c|" + validTime + "|" + validID)},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

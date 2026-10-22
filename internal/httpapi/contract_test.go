@@ -159,11 +159,14 @@ func TestContractRejectsDrift(t *testing.T) {
 		body   string
 		ok     bool
 	}{
-		{"valid page", "/api/v1/posts", 200, `{"items":[` + validItem + `],"next_cursor":null}`, true},
-		{"undocumented field", "/api/v1/posts", 200, `{"items":[],"next_cursor":null,"total":3}`, false},
-		{"missing next_cursor", "/api/v1/posts", 200, `{"items":[]}`, false},
-		{"tags null", "/api/v1/posts", 200, `{"items":[{"slug":"a","title":"A","summary":"s","published_at":"2026-10-01T12:00:00Z","tags":null}],"next_cursor":null}`, false},
-		{"bad date-time", "/api/v1/posts", 200, `{"items":[{"slug":"a","title":"A","summary":"s","published_at":"yesterday","tags":[]}],"next_cursor":null}`, false},
+		{"valid page", "/api/v1/posts", 200, `{"items":[` + validItem + `],"next_cursor":null,"prev_cursor":null}`, true},
+		{"undocumented field", "/api/v1/posts", 200, `{"items":[],"next_cursor":null,"prev_cursor":null,"total":3}`, false},
+		{"missing next_cursor", "/api/v1/posts", 200, `{"items":[],"prev_cursor":null}`, false},
+		{"missing prev_cursor", "/api/v1/posts", 200, `{"items":[],"next_cursor":null}`, false},
+		{"tags null", "/api/v1/posts", 200, `{"items":[{"slug":"a","title":"A","summary":"s","published_at":"2026-10-01T12:00:00Z","tags":null}],"next_cursor":null,"prev_cursor":null}`, false},
+		{"bad date-time", "/api/v1/posts", 200, `{"items":[{"slug":"a","title":"A","summary":"s","published_at":"yesterday","tags":[]}],"next_cursor":null,"prev_cursor":null}`, false},
+		{"valid admin page", "/api/v1/admin/posts", 200, `{"items":[{"id":"01a10933-7891-7d22-8e01-7c250fa9aebf","slug":"a","title":"A","published_at":null,"updated_at":"2026-10-01T12:00:00Z","state":"draft"}],"next_cursor":null,"prev_cursor":"abc"}`, true},
+		{"admin page missing prev_cursor", "/api/v1/admin/posts", 200, `{"items":[],"next_cursor":null}`, false},
 		{"undocumented status", "/api/v1/posts", http.StatusTeapot, `{"error":{"code":"internal","message":"x"}}`, false},
 		{"unknown error code", "/api/v1/posts/a", 404, `{"error":{"code":"gone","message":"x"}}`, false},
 		{"unrouted 404 must be an Error", "/nope", 404, `not found`, false},

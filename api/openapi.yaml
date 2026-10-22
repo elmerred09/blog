@@ -58,7 +58,7 @@ paths:
             default: 10
         - name: cursor
           in: query
-          description: The previous page's next_cursor. Opaque; don't build or parse it.
+          description: The previous page's next_cursor or prev_cursor. Opaque; don't build or parse it.
           schema:
             type: string
       responses:
@@ -163,7 +163,7 @@ paths:
             default: 20
         - name: cursor
           in: query
-          description: The previous page's next_cursor, a post id. Opaque; don't build or parse it.
+          description: The previous page's next_cursor or prev_cursor. Opaque; don't build or parse it.
           schema:
             type: string
       responses:
@@ -502,7 +502,7 @@ components:
     Page:
       type: object
       additionalProperties: false
-      required: [items, next_cursor]
+      required: [items, next_cursor, prev_cursor]
       properties:
         items:
           type: array
@@ -510,6 +510,10 @@ components:
             $ref: "#/components/schemas/PostListItem"
         next_cursor:
           description: Pass as ?cursor= for the next page. Null on the last page.
+          type: string
+          nullable: true
+        prev_cursor:
+          description: Pass as ?cursor= for the previous page. Null on the first page.
           type: string
           nullable: true
 
@@ -598,7 +602,7 @@ components:
     AdminPage:
       type: object
       additionalProperties: false
-      required: [items, next_cursor]
+      required: [items, next_cursor, prev_cursor]
       properties:
         items:
           type: array
@@ -606,6 +610,10 @@ components:
             $ref: "#/components/schemas/AdminPostListItem"
         next_cursor:
           description: Pass as ?cursor= for the next page. Null on the last page.
+          type: string
+          nullable: true
+        prev_cursor:
+          description: Pass as ?cursor= for the previous page. Null on the first page.
           type: string
           nullable: true
 

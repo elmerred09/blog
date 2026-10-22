@@ -41,6 +41,7 @@ type adminListItemJSON struct {
 type adminPageJSON struct {
 	Items      []adminListItemJSON `json:"items"`
 	NextCursor *string             `json:"next_cursor"`
+	PrevCursor *string             `json:"prev_cursor"`
 }
 
 type adminWriteJSON struct {
@@ -84,12 +85,12 @@ func listAdminPosts(posts *admin.Service) gin.HandlerFunc {
 			params.Limit = n
 		}
 		if raw, ok := c.GetQuery("cursor"); ok {
-			id, err := uuid.Parse(raw)
+			cursor, err := admin.ParseCursor(raw)
 			if err != nil {
 				writeError(c, http.StatusBadRequest, codeInvalidRequest, "invalid cursor")
 				return
 			}
-			params.After = &id
+			params.Cursor = &cursor
 		}
 
 		page, err := posts.List(c.Request.Context(), params)
@@ -116,6 +117,10 @@ func listAdminPosts(posts *admin.Service) gin.HandlerFunc {
 		if page.Next != nil {
 			next := page.Next.String()
 			resp.NextCursor = &next
+		}
+		if page.Prev != nil {
+			prev := page.Prev.String()
+			resp.PrevCursor = &prev
 		}
 		c.JSON(http.StatusOK, resp)
 	}

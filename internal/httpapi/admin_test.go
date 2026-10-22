@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -112,6 +113,37 @@ func postBody(slug, title string) map[string]any {
 		"summary": "Summary of " + slug,
 		"body_md": "# " + slug,
 		"tags":    []string{"Go"},
+	}
+}
+
+func TestListAdminPostsPrevCursor(t *testing.T) {
+	t.Parallel()
+	api := newAdminAPI(t)
+	for i := range 8 {
+		dbtest.InsertPost(t, api.pool, dbtest.WithSlug("p"+string(rune('a'+i))))
+	}
+
+	rec := serve(t, api.h, adminRequest(t, http.MethodGet, "/api/v1/admin/posts?limit=3", api.token, nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body %s", rec.Code, rec.Body)
+	}
+	first := decode[adminPageJSON](t, rec)
+	if first.PrevCursor != nil || first.NextCursor == nil {
+		t.Fatalf("first page prev %v next %v", first.PrevCursor, first.NextCursor)
+	}
+
+	second := decode[adminPageJSON](t, serve(t, api.h, adminRequest(t, http.MethodGet,
+		"/api/v1/admin/posts?limit=3&cursor="+url.QueryEscape(*first.NextCursor), api.token, nil)))
+	if second.PrevCursor == nil {
+		t.Fatal("second page has no prev_cursor")
+	}
+	back := decode[adminPageJSON](t, serve(t, api.h, adminRequest(t, http.MethodGet,
+		"/api/v1/admin/posts?limit=3&cursor="+url.QueryEscape(*second.PrevCursor), api.token, nil)))
+	if back.PrevCursor != nil {
+		t.Errorf("prev_cursor = %v, want null back on the first page", back.PrevCursor)
+	}
+	if back.Items[0].ID != first.Items[0].ID {
+		t.Errorf("back starts at %s, want %s", back.Items[0].ID, first.Items[0].ID)
 	}
 }
 

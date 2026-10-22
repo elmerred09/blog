@@ -28,8 +28,10 @@ type Post struct {
 }
 
 type Page struct {
-	// Items is never nil.
+	// Items is never nil, newest first.
 	Items []ListItem
-	// Next is the cursor for the following page, or nil on the last page.
+	// Prev is the cursor for the newer page, or nil on the first page.
+	Prev *Cursor
+	// Next is the cursor for the older page, or nil on the last page.
 	Next *Cursor
 }

@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/elmerred09/blog/internal/platform/db/dbtest"
 	"github.com/elmerred09/blog/internal/post"
 )
@@ -21,7 +23,7 @@ func listAll(t *testing.T, svc *post.Service, limit int) ([]post.ListItem, int) 
 		after *post.Cursor
 	)
 	for pages := 1; pages <= maxPages; pages++ {
-		page, err := svc.List(t.Context(), post.ListParams{After: after, Limit: limit})
+		page, err := svc.List(t.Context(), post.ListParams{Cursor: after, Limit: limit})
 		if err != nil {
 			t.Fatalf("List page %d: %v", pages, err)
 		}
@@ -92,8 +94,8 @@ func TestListPageBoundaries(t *testing.T) {
 		if err != nil {
 			t.Fatalf("List: %v", err)
 		}
-		if page.Items == nil || len(page.Items) != 0 || page.Next != nil {
-			t.Errorf("page = %+v, want non-nil empty Items and no Next", page)
+		if page.Items == nil || len(page.Items) != 0 || page.Next != nil || page.Prev != nil {
+			t.Errorf("page = %+v, want non-nil empty Items and no cursors", page)
 		}
 	})
 
@@ -209,4 +211,157 @@ func TestGet(t *testing.T) {
 			}
 		})
 	}
+}
+
+// walk lists pages from start, following Next (dir After) or Prev (dir Before)
+// until that direction runs out.
+func walk(t *testing.T, svc *post.Service, start *post.Cursor, dir post.Direction, limit int) []post.Page {
+	t.Helper()
+
+	cursor := start
+	var pages []post.Page
+	for range 100 {
+		page, err := svc.List(t.Context(), post.ListParams{Cursor: cursor, Limit: limit})
+		if err != nil {
+			t.Fatalf("List: %v", err)
+		}
+		pages = append(pages, page)
+		if dir == post.Before {
+			cursor = page.Prev
+		} else {
+			cursor = page.Next
+		}
+		if cursor == nil {
+			return pages
+		}
+	}
+	t.Fatal("still paginating after 100 pages")
+	return nil
+}
+
+func sameSlugPages(a, b [][]string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if !slices.Equal(a[i], b[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func pageSlugs(pages []post.Page) [][]string {
+	out := make([][]string, len(pages))
+	for i, page := range pages {
+		out[i] = itemSlugs(page.Items)
+	}
+	return out
+}
+
+// publishSeries inserts n published posts. Five of them share a published_at,
+// and at limit 10 that tie crosses the boundary between the first two pages.
+func publishSeries(t *testing.T, pool *pgxpool.Pool, n int) {
+	t.Helper()
+
+	now := dbtest.Now(t, pool).Truncate(time.Microsecond)
+	for i := 1; i <= n; i++ {
+		at := now.Add(-time.Duration(i) * time.Hour)
+		if i >= 9 && i <= 13 {
+			at = now.Add(-9 * time.Hour)
+		}
+		dbtest.InsertPost(t, pool, dbtest.PublishedAt(at))
+	}
+}
+
+func TestListBackward(t *testing.T) {
+	t.Parallel()
+
+	const limit = 10
+
+	t.Run("forward and backward visit the same pages", func(t *testing.T) {
+		t.Parallel()
+		pool, _ := env.NewDB(t)
+		publishSeries(t, pool, 23)
+		svc := post.NewService(pool)
+
+		forward := walk(t, svc, nil, post.After, limit)
+		if len(forward) != 3 {
+			t.Fatalf("forward pages = %d, want 3", len(forward))
+		}
+		if forward[0].Prev != nil {
+			t.Errorf("first page Prev = %v, want nil", forward[0].Prev)
+		}
+		if forward[1].Prev == nil || forward[2].Prev == nil {
+			t.Error("pages after the first have no Prev")
+		}
+
+		back := walk(t, svc, forward[len(forward)-1].Prev, post.Before, limit)
+		want := slices.Clone(forward[:len(forward)-1])
+		slices.Reverse(want)
+		if got, wantSlugs := pageSlugs(back), pageSlugs(want); !sameSlugPages(got, wantSlugs) {
+			t.Errorf("backward pages:\n got %v\nwant %v", got, wantSlugs)
+		}
+		if back[len(back)-1].Prev != nil {
+			t.Errorf("walking back to the top left Prev set: %v", back[len(back)-1].Prev)
+		}
+	})
+
+	t.Run("a backward fetch at the top is the first page", func(t *testing.T) {
+		t.Parallel()
+		pool, _ := env.NewDB(t)
+		publishSeries(t, pool, 23)
+		svc := post.NewService(pool)
+
+		forward := walk(t, svc, nil, post.After, limit)
+		// The second page's Prev points at its first post. Exactly one page
+		// is newer than that post, so the fetch has no extra row.
+		page, err := svc.List(t.Context(), post.ListParams{Cursor: forward[1].Prev, Limit: limit})
+		if err != nil {
+			t.Fatalf("List: %v", err)
+		}
+		if page.Prev != nil {
+			t.Errorf("Prev = %v, want nil", page.Prev)
+		}
+		if got, want := itemSlugs(page.Items), itemSlugs(forward[0].Items); !slices.Equal(got, want) {
+			t.Errorf("top page = %v, want the first page %v", got, want)
+		}
+	})
+
+	t.Run("a post published mid-walk shows up on the way back", func(t *testing.T) {
+		t.Parallel()
+		pool, _ := env.NewDB(t)
+		publishSeries(t, pool, 23)
+		svc := post.NewService(pool)
+
+		forward := walk(t, svc, nil, post.After, limit)
+		added := dbtest.InsertPost(t, pool, dbtest.PublishedAgo(time.Second))
+
+		back := walk(t, svc, forward[len(forward)-1].Prev, post.Before, limit)
+		// The walk ends on the first page, which is where the new post shows.
+		// That page can repeat posts from the page before it: the new post
+		// made the previous page full, so the one newer than it is a short
+		// page and gets replaced by the first page.
+		final := itemSlugs(back[len(back)-1].Items)
+		if back[len(back)-1].Prev != nil || slices.Index(final, added.Slug) != 0 {
+			t.Errorf("final page (prev %v) = %v, want %s first and no Prev", back[len(back)-1].Prev, final, added.Slug)
+		}
+		seen := map[string]int{}
+		for _, page := range back[:len(back)-1] {
+			for _, slug := range itemSlugs(page.Items) {
+				seen[slug]++
+			}
+		}
+		for _, slug := range itemSlugs(forward[len(forward)-1].Items) {
+			seen[slug]++
+		}
+		if seen[added.Slug] != 0 {
+			t.Errorf("new post appears before the final page")
+		}
+		for slug, n := range seen {
+			if n != 1 {
+				t.Errorf("%s appears %d times before the final page, want 1", slug, n)
+			}
+		}
+	})
 }

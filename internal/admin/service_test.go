@@ -341,12 +341,12 @@ func TestList(t *testing.T) {
 
 	const limit = 5
 	var (
-		got   []uuid.UUID
-		after *uuid.UUID
-		pages int
+		got    []uuid.UUID
+		cursor *admin.Cursor
+		pages  int
 	)
 	for pages = 1; pages <= 10; pages++ {
-		page, err := svc.List(t.Context(), admin.ListParams{After: after, Limit: limit})
+		page, err := svc.List(t.Context(), admin.ListParams{Cursor: cursor, Limit: limit})
 		if err != nil {
 			t.Fatalf("List: %v", err)
 		}
@@ -365,7 +365,7 @@ func TestList(t *testing.T) {
 		if len(page.Items) != limit {
 			t.Fatalf("page %d has %d items and a Next", pages, len(page.Items))
 		}
-		after = page.Next
+		cursor = page.Next
 	}
 
 	if !slices.Equal(got, want) {
@@ -374,6 +374,140 @@ func TestList(t *testing.T) {
 	if pages != 3 {
 		t.Errorf("pages = %d, want 3", pages)
 	}
+}
+
+func TestListBackward(t *testing.T) {
+	t.Parallel()
+
+	const limit = 5
+
+	ids := func(page admin.Page) []uuid.UUID {
+		out := make([]uuid.UUID, len(page.Items))
+		for i, item := range page.Items {
+			out[i] = item.ID
+		}
+		return out
+	}
+	walkIDs := func(t *testing.T, svc *admin.Service, start *admin.Cursor, dir admin.Direction) [][]uuid.UUID {
+		t.Helper()
+		cursor := start
+		var pages [][]uuid.UUID
+		for range 100 {
+			page, err := svc.List(t.Context(), admin.ListParams{Cursor: cursor, Limit: limit})
+			if err != nil {
+				t.Fatalf("List: %v", err)
+			}
+			pages = append(pages, ids(page))
+			if dir == admin.Before {
+				cursor = page.Prev
+			} else {
+				cursor = page.Next
+			}
+			if cursor == nil {
+				return pages
+			}
+		}
+		t.Fatal("still paginating after 100 pages")
+		return nil
+	}
+
+	t.Run("forward and backward visit the same pages", func(t *testing.T) {
+		t.Parallel()
+		pool, svc := newService(t)
+		for range 12 {
+			dbtest.InsertPost(t, pool)
+		}
+
+		forwardPages := walkPages(t, svc, nil, admin.After, limit)
+		if len(forwardPages) != 3 {
+			t.Fatalf("forward pages = %d, want 3", len(forwardPages))
+		}
+		if forwardPages[0].Prev != nil {
+			t.Errorf("first page Prev = %v, want nil", forwardPages[0].Prev)
+		}
+
+		back := walkIDs(t, svc, forwardPages[len(forwardPages)-1].Prev, admin.Before)
+		var want [][]uuid.UUID
+		for i := len(forwardPages) - 2; i >= 0; i-- {
+			want = append(want, ids(forwardPages[i]))
+		}
+		if !sameIDPages(back, want) {
+			t.Errorf("backward pages:\n got %v\nwant %v", back, want)
+		}
+	})
+
+	t.Run("a post created mid-walk shows up on the way back", func(t *testing.T) {
+		t.Parallel()
+		pool, svc := newService(t)
+		for range 12 {
+			dbtest.InsertPost(t, pool)
+		}
+		forwardPages := walkPages(t, svc, nil, admin.After, limit)
+		added := dbtest.InsertPost(t, pool)
+
+		back := walkIDs(t, svc, forwardPages[len(forwardPages)-1].Prev, admin.Before)
+		// The final page is the first page, so it starts with the new post.
+		// It can repeat ids from the page before it; see the post service test.
+		final := back[len(back)-1]
+		if final[0] != added.ID {
+			t.Errorf("final page starts with %s, want the new post %s", final[0], added.ID)
+		}
+		seen := map[uuid.UUID]int{}
+		for _, page := range back[:len(back)-1] {
+			for _, id := range page {
+				seen[id]++
+			}
+		}
+		for _, id := range ids(forwardPages[len(forwardPages)-1]) {
+			seen[id]++
+		}
+		if seen[added.ID] != 0 {
+			t.Errorf("new post appears before the final page")
+		}
+		for id, n := range seen {
+			if n != 1 {
+				t.Errorf("%s appears %d times before the final page, want 1", id, n)
+			}
+		}
+	})
+}
+
+func sameIDPages(a, b [][]uuid.UUID) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if !slices.Equal(a[i], b[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+// walkPages follows Next or Prev. The id walk above compares values; this one
+// keeps the cursors, so a test can start a backward walk from the last page.
+func walkPages(t *testing.T, svc *admin.Service, start *admin.Cursor, dir admin.Direction, limit int) []admin.Page {
+	t.Helper()
+
+	cursor := start
+	var pages []admin.Page
+	for range 100 {
+		page, err := svc.List(t.Context(), admin.ListParams{Cursor: cursor, Limit: limit})
+		if err != nil {
+			t.Fatalf("List: %v", err)
+		}
+		pages = append(pages, page)
+		if dir == admin.Before {
+			cursor = page.Prev
+		} else {
+			cursor = page.Next
+		}
+		if cursor == nil {
+			return pages
+		}
+	}
+	t.Fatal("still paginating after 100 pages")
+	return nil
 }
 
 func TestListLimit(t *testing.T) {
@@ -395,7 +529,7 @@ func TestListEmpty(t *testing.T) {
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}
-	if page.Items == nil || len(page.Items) != 0 || page.Next != nil {
-		t.Errorf("page = %+v, want empty Items and no Next", page)
+	if page.Items == nil || len(page.Items) != 0 || page.Next != nil || page.Prev != nil {
+		t.Errorf("page = %+v, want empty Items and no cursors", page)
 	}
 }

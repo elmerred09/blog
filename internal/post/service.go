@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -31,8 +32,8 @@ func NewService(conn db.DBTX) *Service {
 }
 
 type ListParams struct {
-	// After is the previous page's Next, or nil for the first page.
-	After *Cursor
+	// Cursor is the previous page's Prev or Next, or nil for the first page.
+	Cursor *Cursor
 	// Limit is the page size, from 1 to MaxLimit.
 	Limit int
 }
@@ -42,12 +43,20 @@ func (s *Service) List(ctx context.Context, p ListParams) (Page, error) {
 	if p.Limit < 1 || p.Limit > MaxLimit {
 		return Page{}, fmt.Errorf("%w: got %d", ErrInvalidLimit, p.Limit)
 	}
+	if p.Cursor != nil && p.Cursor.Direction == Before {
+		return s.listBefore(ctx, p)
+	}
+	return s.listAfter(ctx, p)
+}
 
+// listAfter is a page of posts older than the cursor (or the newest posts,
+// when there is no cursor), read in the list order.
+func (s *Service) listAfter(ctx context.Context, p ListParams) (Page, error) {
 	// One extra row says whether another page exists, without a count query.
 	params := db.ListPostsParams{PageSize: int32(p.Limit + 1)}
-	if p.After != nil {
-		params.AfterPublishedAt = &p.After.PublishedAt
-		params.AfterID = &p.After.ID
+	if p.Cursor != nil {
+		params.AfterPublishedAt = &p.Cursor.PublishedAt
+		params.AfterID = &p.Cursor.ID
 	}
 	rows, err := s.q.ListPosts(ctx, params)
 	if err != nil {
@@ -58,22 +67,65 @@ func (s *Service) List(ctx context.Context, p ListParams) (Page, error) {
 	if hasMore {
 		rows = rows[:p.Limit]
 	}
+	// A cursor was given, so something newer than this page exists: the row
+	// the cursor itself points at.
+	return s.pageFrom(ctx, listRows(rows), p.Cursor != nil, hasMore)
+}
 
-	itemRows := make([]Row, len(rows))
-	for i, r := range rows {
-		itemRows[i] = Row(r)
-	}
-	items, err := ListItems(ctx, s.q, itemRows)
+// listBefore is a page of posts newer than the cursor. The query returns
+// them oldest first; they're reversed so the page reads newest first, like
+// every other page. A short result has reached the top, and the first page
+// replaces it, so arriving there shows exactly what no cursor shows.
+func (s *Service) listBefore(ctx context.Context, p ListParams) (Page, error) {
+	rows, err := s.q.ListPostsBefore(ctx, db.ListPostsBeforeParams{
+		BeforePublishedAt: p.Cursor.PublishedAt,
+		BeforeID:          p.Cursor.ID,
+		PageSize:          int32(p.Limit + 1),
+	})
 	if err != nil {
 		return Page{}, fmt.Errorf("list posts: %w", err)
 	}
+	if len(rows) <= p.Limit {
+		return s.listAfter(ctx, ListParams{Limit: p.Limit})
+	}
+	rows = rows[:p.Limit]
+	slices.Reverse(rows)
+	return s.pageFrom(ctx, listBeforeRows(rows), true, true)
+}
 
+// pageFrom attaches tags and the cursors. withPrev and withNext say whether
+// each direction has another page; the cursors point at this page's ends.
+func (s *Service) pageFrom(ctx context.Context, rows []Row, withPrev, withNext bool) (Page, error) {
+	items, err := ListItems(ctx, s.q, rows)
+	if err != nil {
+		return Page{}, fmt.Errorf("list posts: %w", err)
+	}
 	page := Page{Items: items}
-	if hasMore {
+	if withPrev && len(rows) > 0 {
+		first := rows[0]
+		page.Prev = &Cursor{Direction: Before, PublishedAt: *first.PublishedAt, ID: first.ID}
+	}
+	if withNext && len(rows) > 0 {
 		last := rows[len(rows)-1]
-		page.Next = &Cursor{PublishedAt: *last.PublishedAt, ID: last.ID}
+		page.Next = &Cursor{Direction: After, PublishedAt: *last.PublishedAt, ID: last.ID}
 	}
 	return page, nil
+}
+
+func listRows(rows []db.ListPostsRow) []Row {
+	out := make([]Row, len(rows))
+	for i, r := range rows {
+		out[i] = Row(r)
+	}
+	return out
+}
+
+func listBeforeRows(rows []db.ListPostsBeforeRow) []Row {
+	out := make([]Row, len(rows))
+	for i, r := range rows {
+		out[i] = Row(r)
+	}
+	return out
 }
 
 // Row is the columns a list-style query (ListPosts, SearchPosts) selects for

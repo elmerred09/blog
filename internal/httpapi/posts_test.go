@@ -43,11 +43,11 @@ func TestListPostsShape(t *testing.T) {
 	}
 
 	raw := decode[map[string]any](t, rec)
-	if got, want := keys(raw), []string{"items", "next_cursor"}; !slices.Equal(got, want) {
+	if got, want := keys(raw), []string{"items", "next_cursor", "prev_cursor"}; !slices.Equal(got, want) {
 		t.Errorf("page keys = %v, want %v", got, want)
 	}
-	if raw["next_cursor"] != nil {
-		t.Errorf("next_cursor = %v, want null on the only page", raw["next_cursor"])
+	if raw["next_cursor"] != nil || raw["prev_cursor"] != nil {
+		t.Errorf("next_cursor = %v, prev_cursor = %v; want both null on the only page", raw["next_cursor"], raw["prev_cursor"])
 	}
 	items, _ := raw["items"].([]any)
 	if len(items) != 2 {
@@ -80,8 +80,8 @@ func TestListPostsEmpty(t *testing.T) {
 
 	rec := get(t, h, "/api/v1/posts")
 
-	if body := strings.TrimSpace(rec.Body.String()); body != `{"items":[],"next_cursor":null}` {
-		t.Errorf("body = %s, want an empty items array and null next_cursor", body)
+	if body := strings.TrimSpace(rec.Body.String()); body != `{"items":[],"next_cursor":null,"prev_cursor":null}` {
+		t.Errorf("body = %s, want an empty items array and null cursors", body)
 	}
 }
 
@@ -94,9 +94,9 @@ func TestListPostsDefaultLimit(t *testing.T) {
 
 	page := decode[pageJSON](t, get(t, h, "/api/v1/posts"))
 
-	if len(page.Items) != post.DefaultLimit || page.NextCursor == nil {
-		t.Errorf("got %d items, next_cursor %v; want %d and a cursor",
-			len(page.Items), page.NextCursor, post.DefaultLimit)
+	if len(page.Items) != post.DefaultLimit || page.NextCursor == nil || page.PrevCursor != nil {
+		t.Errorf("got %d items, next_cursor %v, prev_cursor %v; want %d, a next cursor and no prev",
+			len(page.Items), page.NextCursor, page.PrevCursor, post.DefaultLimit)
 	}
 }
 
@@ -139,6 +139,38 @@ func TestListPostsFollowsNextCursor(t *testing.T) {
 	if pages != 4 {
 		t.Errorf("pages = %d, want 4 (25 posts at 7 per page)", pages)
 	}
+}
+
+func TestListPostsFollowsPrevCursor(t *testing.T) {
+	t.Parallel()
+	h, pool := postsAPI(t)
+	for i := range 15 {
+		dbtest.InsertPost(t, pool, dbtest.PublishedAgo(time.Duration(i+1)*time.Hour))
+	}
+
+	first := decode[pageJSON](t, get(t, h, "/api/v1/posts?limit=6"))
+	if first.PrevCursor != nil || first.NextCursor == nil {
+		t.Fatalf("first page prev %v next %v", first.PrevCursor, first.NextCursor)
+	}
+	second := decode[pageJSON](t, get(t, h, "/api/v1/posts?limit=6&cursor="+url.QueryEscape(*first.NextCursor)))
+	if second.PrevCursor == nil {
+		t.Fatal("second page has no prev_cursor")
+	}
+	back := decode[pageJSON](t, get(t, h, "/api/v1/posts?limit=6&cursor="+url.QueryEscape(*second.PrevCursor)))
+	if back.PrevCursor != nil {
+		t.Errorf("back at the top, prev_cursor = %v, want null", back.PrevCursor)
+	}
+	if got, want := slugs(back.Items), slugs(first.Items); !slices.Equal(got, want) {
+		t.Errorf("page from prev_cursor = %v, want the first page %v", got, want)
+	}
+}
+
+func slugs(items []listItemJSON) []string {
+	out := make([]string, len(items))
+	for i, it := range items {
+		out[i] = it.Slug
+	}
+	return out
 }
 
 func TestListPostsRejectsBadQuery(t *testing.T) {
