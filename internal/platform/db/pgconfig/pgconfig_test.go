@@ -22,7 +22,7 @@ func configuredPool(t *testing.T, statementTimeout time.Duration) *pgxpool.Pool 
 	t.Helper()
 	base, _ := env.NewDB(t)
 	cfg := base.Config()
-	pgconfig.Configure(cfg, statementTimeout)
+	pgconfig.Configure(cfg, statementTimeout, nil)
 	pool, err := pgxpool.NewWithConfig(t.Context(), cfg)
 	if err != nil {
 		t.Fatalf("new pool: %v", err)

@@ -32,7 +32,7 @@ if err != nil {
 
 ## Structure
 
-- No global mutable state or `init()` side effects. Pass dependencies explicitly (constructors).
+- No global mutable state or `init()` side effects. Pass dependencies explicitly (constructors). The OpenTelemetry tracer provider is passed in (on `httpapi.Deps`, and as an instrumentation option); only `main` sets the global provider. Never put query arguments, tokens, or cookies on a span.
 - Keep interfaces small and define them consumer-side by default (e.g. the post repository). Provider-side is intended only when there are multiple implementations, like `search.Searcher` (Postgres now, Elasticsearch later); don't move it.
 - Group packages by domain (`post`, `admin`, `search`, `tags`), not by layer. Shared pieces get their own small package: `internal/render` (markdown to HTML), `internal/slug`, and `internal/tags` (tag writes and the tag list).
 - `internal/post` is the read side for posts. Post writes go in `internal/admin`, so the public API's package stays read-only.

@@ -12,6 +12,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -30,6 +32,7 @@ func requestID() gin.HandlerFunc {
 		}
 		c.Set(requestIDKey, id)
 		c.Header(requestIDHeader, id)
+		trace.SpanFromContext(c.Request.Context()).SetAttributes(attribute.String("request_id", id))
 		c.Next()
 	}
 }

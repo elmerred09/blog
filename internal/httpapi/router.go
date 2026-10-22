@@ -6,10 +6,15 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
+	tracenoop "go.opentelemetry.io/otel/trace/noop"
 
 	"github.com/elmerred09/blog/internal/admin"
 	"github.com/elmerred09/blog/internal/auth"
 	"github.com/elmerred09/blog/internal/media"
+	"github.com/elmerred09/blog/internal/platform/telemetry"
 	"github.com/elmerred09/blog/internal/post"
 	"github.com/elmerred09/blog/internal/search"
 	"github.com/elmerred09/blog/internal/tags"
@@ -36,6 +41,13 @@ type Deps struct {
 	// RequestTimeout bounds each request's context. Keep it below the
 	// server's WriteTimeout, or the timeout response can't be written.
 	RequestTimeout time.Duration
+	// TracerProvider records one span per request. Nil uses a no-op provider,
+	// so a process with no collector and the tests export nothing. Passed in,
+	// rather than read from the global provider.
+	TracerProvider trace.TracerProvider
+	// Propagator reads an incoming traceparent. Nil uses W3C TraceContext
+	// and Baggage.
+	Propagator propagation.TextMapPropagator
 }
 
 // Admin is the editor's dependencies. All of them are required together.
@@ -60,8 +72,20 @@ func newEngine(d Deps) *gin.Engine {
 		timeout = DefaultRequestTimeout
 	}
 
+	// The span is first, so the request id and the log line sit on it.
 	// requestLogger wraps recovery so a recovered panic is logged as a 500.
-	r.Use(requestID(), requestLogger(d.Logger), recovery(d.Logger), requestTimeout(timeout))
+	r.Use(
+		otelgin.Middleware(telemetry.ServiceName,
+			otelgin.WithTracerProvider(tracerProvider(d.TracerProvider)),
+			otelgin.WithPropagators(propagator(d.Propagator)),
+			otelgin.WithFilter(traceRequest),
+			otelgin.WithSpanNameFormatter(spanName),
+		),
+		requestID(),
+		requestLogger(d.Logger),
+		recovery(d.Logger),
+		requestTimeout(timeout),
+	)
 
 	r.GET("/livez", livez)
 	r.GET("/readyz", readyz(d.DB))
@@ -92,4 +116,38 @@ func newEngine(d Deps) *gin.Engine {
 		writeError(c, http.StatusMethodNotAllowed, codeMethodNotAllowed, "method not allowed")
 	})
 	return r
+}
+
+func tracerProvider(p trace.TracerProvider) trace.TracerProvider {
+	if p == nil {
+		return tracenoop.NewTracerProvider()
+	}
+	return p
+}
+
+func propagator(p propagation.TextMapPropagator) propagation.TextMapPropagator {
+	if p == nil {
+		return propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{})
+	}
+	return p
+}
+
+// traceRequest drops health probes. A platform hits them constantly, and a
+// trace of one says nothing about a slow page.
+func traceRequest(r *http.Request) bool {
+	switch r.URL.Path {
+	case "/livez", "/readyz":
+		return false
+	default:
+		return true
+	}
+}
+
+// spanName is the route pattern (/api/v1/posts/:slug), the same string the
+// request log calls "route", so a span and a log line name the same endpoint.
+func spanName(c *gin.Context) string {
+	if route := c.FullPath(); route != "" {
+		return route
+	}
+	return "unmatched"
 }

@@ -69,6 +69,20 @@ services:
       - ./deploy/rustfs/cors.json:/cors.json:ro
     restart: "no"
 
+  # Traces and logs for local debugging. Not part of `make up`; start it with
+  # `make otel-up`. Grafana is on the host's 3001 because Next uses 3000.
+  otel-lgtm:
+    image: grafana/otel-lgtm:0.37.0
+    profiles: ["observability"]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3001:3000"
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
+    volumes:
+      - oteldata:/data
+
 volumes:
   pgdata:
   rustfsdata:
+  oteldata:

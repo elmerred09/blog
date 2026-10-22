@@ -214,7 +214,7 @@ func TestRequestTimeout(t *testing.T) {
 	t.Parallel()
 	base, _ := env.NewDB(t)
 	cfg := base.Config()
-	pgconfig.Configure(cfg, 12*time.Second)
+	pgconfig.Configure(cfg, 12*time.Second, nil)
 	pool, err := pgxpool.NewWithConfig(t.Context(), cfg)
 	if err != nil {
 		t.Fatalf("new pool: %v", err)

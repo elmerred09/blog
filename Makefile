@@ -50,7 +50,7 @@ API_URL ?= http://localhost:8080
 # Files for web-fmt, relative to web/ or absolute; override with WEB_FILES="app/page.tsx".
 WEB_FILES ?= .
 
-.PHONY: sqlc sqlc-check lint fmt fmt-check test deps-check hooks migrate migrate-down migrate-status migrate-new up down restart seed e2e-db e2e-install e2e e2e-ui api admin-keys node-check \
+.PHONY: sqlc sqlc-check lint fmt fmt-check test deps-check hooks migrate migrate-down migrate-status migrate-new up down restart otel-up otel-down seed e2e-db e2e-install e2e e2e-ui api admin-keys node-check \
 	web-install web-deps web web-build web-lint web-typecheck web-fmt web-fmt-check web-test web-types web-types-check web-check \
 	chroma-css chroma-css-check
 
@@ -63,6 +63,14 @@ down:
 restart:
 	docker compose down
 	docker compose up -d
+
+# Local traces and logs (Grafana on http://localhost:3001). A separate profile,
+# so `make up` stays the database and the bucket.
+otel-up:
+	docker compose --profile observability up -d otel-lgtm
+
+otel-down:
+	docker compose --profile observability rm -f -s otel-lgtm
 
 migrate:
 	$(GOOSE_RUN) up
@@ -112,9 +120,12 @@ e2e-ui: web-deps e2e-db
 	scripts/e2e-env.sh '$(E2E_DBSTRING)'
 	cd $(WEB) && ./node_modules/.bin/playwright test --ui $(E2E_ARGS)
 
+# OTEL=1 exports traces and logs to make otel-up. Unset, the API exports nothing.
 api:
 	@set -a; [ -f .env ] && . ./.env; set +a; \
-		DATABASE_URL="$(GOOSE_DBSTRING)" $(GO) run ./cmd/api
+		DATABASE_URL="$(GOOSE_DBSTRING)" \
+		$(if $(filter 1,$(OTEL)),OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 OTEL_SERVICE_NAME=blog-api,) \
+		$(GO) run ./cmd/api
 
 # Writes the gitignored .env and web/.env.local; see scripts/admin-keys.sh.
 admin-keys:
@@ -178,8 +189,12 @@ web-deps:
 
 # Next loads web/.env.local itself. Don't source it here: exported variables
 # win over the file, and the shell would keep each \n in the key literal.
+# OTEL=1 exports traces to make otel-up. Unset, Next exports nothing.
+# NEXT_OTEL_VERBOSE=1 adds the spans Next hides by default.
 web: web-deps
-	cd $(WEB) && API_URL="$(API_URL)" npm run dev
+	cd $(WEB) && API_URL="$(API_URL)" \
+		$(if $(filter 1,$(OTEL)),OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 OTEL_SERVICE_NAME=blog-web,) \
+		npm run dev
 
 web-build: web-deps
 	cd $(WEB) && npm run build
