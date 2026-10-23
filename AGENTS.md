@@ -26,6 +26,7 @@ The goals include learning Postgres internals and search, so some work is delibe
   - Admin specs import `test` from `e2e/admin.ts` (it fails on uncaught browser errors and hydration warnings), write their own posts under `uniqueSlug`, and read only those. Public specs assert on fixture posts and their relative order, never on counts or positions.
   - Assert on the final URL and on visible text, never on status codes: redirects from `requireAdmin()` and not-found pages are streamed with a 200.
   - Only the search fixtures, the draft and the scheduled post contain "quokka"; the search spec counts on that.
+- `deploy/` is production. `deploy/docker/` builds the API image, the goose image, and the Next.js standalone image. `deploy/prod/` is the droplet stack: Compose, Caddy, env examples, and the backup script.
 
 Not everything above exists yet. Check the tree before assuming a package is there.
 
@@ -77,6 +78,34 @@ Scoped rules live in `.cursor/rules/` (`go.mdc`, `sql.mdc`, `web.mdc`). Key poin
 - Git hooks (lefthook) run lint (which includes the gofmt check), `sqlc diff` and `make chroma-css-check` on commit, and tests on push. For `web/` and `api/openapi.yaml`, they run the web lint, typecheck, Prettier check and API types check on commit (each only when matching files are staged), and `make web-test` on push.
 
 - CI (`.github/workflows/ci.yml`, GitHub Actions) runs on pull requests and pushes to `main`, calling the same `make` targets. The `go` job runs `fmt-check`, `lint` (golangci-lint v2.14.0, built from source with the repo's Go), `sqlc-check`, `chroma-css-check`, `deps-check` and `test` (Docker for the testcontainers tests). The `web` job runs `web-install`, `web-check` and `web-build`. The `e2e` job starts the compose Postgres and RustFS, caches Playwright's browsers by version, runs `make e2e-install` (with `--with-deps`) and `make e2e`, and uploads the report and traces when it fails. Unlike the stop hook, CI runs the web checks. It doesn't use nvm, so don't call `make node-check` there. Keep the golangci-lint version in the workflow in step with the one you use locally.
+
+## Deployment
+
+Production is one DigitalOcean droplet. Docker Compose in `/srv/blog` runs Caddy, Next.js, the Go API, and Postgres. Caddy is the only published port. The API and Postgres stay on the Compose network. Cloudflare proxies the domain and terminates the public certificate. Caddy serves a Cloudflare origin certificate from `/srv/blog/certs/origin.pem` and `origin.key` (mode 600). Create that certificate under SSL/TLS, Origin Server, and include the apex domain and `www`. Images live in the public R2 bucket `blog-media`, served at `media.<domain>`. Database dumps go to the private bucket `blog-backups`.
+
+Secrets stay on the droplet, mode 600, owned by `deploy`. They are not in git.
+
+- `/srv/blog/api.env` is the API: `DATABASE_URL`, the Ed25519 public key, `ADMIN_SUBJECTS`, and the `blog-media` S3 settings. Examples are `deploy/prod/*.env.example`.
+- `/srv/blog/web.env` is Next.js: `API_URL=http://api:8080`, `SITE_URL`, `SITE_INDEXING`, Better Auth, the production GitHub OAuth app, the GitHub id, and the Ed25519 private key.
+- `/srv/blog/postgres.env` is the database user, password, and database name. The password is the one inside `DATABASE_URL`.
+- `/srv/blog/caddy.env` is `DOMAIN`, the apex name with no scheme.
+- `/srv/blog/backup.env` is the token scoped to `blog-backups`.
+- `/srv/blog/.env` is only `IMAGE_TAG`. The deploy workflow rewrites it.
+
+A push to `main` runs CI. A successful CI run on `main` runs `.github/workflows/deploy.yml`, which builds `ghcr.io/elmerred09/blog-api`, `blog-migrate`, and `blog-web` tagged with the commit SHA. `SITE_URL` is the repository variable. `SITE_INDEXING` is `false` until that variable's job is changed and a new image is built. The droplet must already be logged in to GHCR with a `read:packages` token (`docker login ghcr.io` as `deploy`). The workflow SSHes as `deploy` and runs `docker compose --profile tools pull`, then `docker compose --profile tools run --rm migrate up`, then `docker compose up -d`. The `tools` profile is what makes the one-shot migrate service available. GitHub secrets for that SSH are `DEPLOY_HOST`, `DEPLOY_SSH_KEY` (a key whose public half is in `deploy`'s `authorized_keys`, separate from a personal key), and `DEPLOY_KNOWN_HOSTS` (`ssh-keyscan` of the droplet).
+
+To roll back, run the Deploy workflow and pass the older commit SHA. That builds and starts that commit. `migrate up` runs again and does not reverse a migration. Migrating down is a separate, deliberate `docker compose --profile tools run --rm migrate down`.
+
+`deploy/prod/backup.sh` runs `pg_dump -Fc` in the Postgres container and uploads `blog-YYYYMMDD.dump`. Dumps dated before 14 days ago are deleted. Install the timer once, as root:
+
+```bash
+sudo cp /srv/blog/blog-backup.service /srv/blog/blog-backup.timer /etc/systemd/system/
+sudo systemctl enable --now blog-backup.timer
+```
+
+Prove a backup by running `/srv/blog/backup.sh`, then restoring the dump into a scratch database. Point-in-time recovery is not set up.
+
+OpenTelemetry stays off in production until `OTEL_*` is set. Indexing stays off until `SITE_INDEXING=true` is baked into a new web image.
 
 ## Working modes
 

@@ -1,0 +1,10 @@
+[Unit]
+Description=Dump the blog database to R2
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=deploy
+WorkingDirectory=/srv/blog
+ExecStart=/srv/blog/backup.sh

@@ -1,0 +1,28 @@
+# Cloudflare talks to the origin over HTTPS (Full strict) with the origin
+# certificate in /certs. auto_https is off so Caddy does not start an ACME
+# challenge behind the proxy. DOMAIN comes from caddy.env.
+{
+	auto_https off
+}
+
+{$DOMAIN}:443 {
+	tls /certs/origin.pem /certs/origin.key
+	encode gzip zstd
+	log {
+		output stdout
+	}
+	reverse_proxy web:3000
+}
+
+{$DOMAIN}:80 {
+	redir https://{$DOMAIN}{uri} permanent
+}
+
+www.{$DOMAIN}:443 {
+	tls /certs/origin.pem /certs/origin.key
+	redir https://{$DOMAIN}{uri} permanent
+}
+
+www.{$DOMAIN}:80 {
+	redir https://{$DOMAIN}{uri} permanent
+}
