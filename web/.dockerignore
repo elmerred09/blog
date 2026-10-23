@@ -1,6 +1,8 @@
 node_modules
 .next
 e2e
+# next build typechecks this, and it imports e2e/, which is omitted above.
+playwright.config.ts
 playwright-report
 test-results
 *.env
