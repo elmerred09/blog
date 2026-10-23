@@ -62,6 +62,8 @@ jobs:
       - run: make web-install
       - run: make web-check
       - run: make web-build
+        env:
+          SITE_URL: https://example.com
 
   # The Playwright suite against the real stack: compose Postgres and RustFS,
   # the Go API, and a production Next build, both started by Playwright.

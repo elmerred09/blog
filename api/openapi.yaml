@@ -99,6 +99,22 @@ paths:
         "503":
           $ref: "#/components/responses/Timeout"
 
+  /api/v1/sitemap:
+    get:
+      operationId: listSitemapEntries
+      summary: Every published post, newest first, for the sitemap. At most 50000. No pagination.
+      responses:
+        "200":
+          description: The entries. Empty when nothing is published.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SitemapPage"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Timeout"
+
   /api/v1/search:
     get:
       operationId: searchPosts
@@ -498,6 +514,29 @@ components:
         updated_at:
           type: string
           format: date-time
+
+    SitemapEntry:
+      type: object
+      additionalProperties: false
+      required: [slug, last_modified]
+      properties:
+        slug:
+          type: string
+        last_modified:
+          description: The later of updated_at and published_at, when the post last changed for a reader.
+          type: string
+          format: date-time
+
+    SitemapPage:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          description: Published posts, newest first. At most 50000. Empty, never null.
+          type: array
+          items:
+            $ref: "#/components/schemas/SitemapEntry"
 
     Page:
       type: object

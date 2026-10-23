@@ -188,6 +188,28 @@ func tagsFor(ctx context.Context, q *db.Queries, postIDs []uuid.UUID) (map[uuid.
 	return tagsByPost, nil
 }
 
+// SitemapEntry is one published post in the sitemap.
+type SitemapEntry struct {
+	Slug         string
+	LastModified time.Time
+}
+
+// SitemapEntries returns every published post, newest published first, up to
+// one sitemap file. Drafts, scheduled posts, and deleted posts are absent.
+// LastModified is the later of updated_at and published_at: the moment the
+// post last changed for a reader.
+func (s *Service) SitemapEntries(ctx context.Context) ([]SitemapEntry, error) {
+	rows, err := s.q.ListSitemapPosts(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list sitemap posts: %w", err)
+	}
+	entries := make([]SitemapEntry, len(rows))
+	for i, r := range rows {
+		entries[i] = SitemapEntry{Slug: r.Slug, LastModified: r.LastModified}
+	}
+	return entries, nil
+}
+
 // Get returns the published post with this slug, or ErrNotFound.
 func (s *Service) Get(ctx context.Context, slug string) (Post, error) {
 	row, err := s.q.GetPostBySlug(ctx, slug)

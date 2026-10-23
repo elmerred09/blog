@@ -93,6 +93,7 @@ func newEngine(d Deps) *gin.Engine {
 	v1 := r.Group("/api/v1")
 	v1.GET("/posts", listPosts(d.Posts))
 	v1.GET("/posts/:slug", getPost(d.Posts))
+	v1.GET("/sitemap", getSitemap(d.Posts))
 	v1.GET("/search", searchPosts(d.Search))
 	v1.GET("/tags", listTags(d.Tags, tags.Published))
 

@@ -14,7 +14,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (post === null) {
     notFound();
   }
-  return { title: post.title, description: post.summary };
+  return {
+    title: post.title,
+    description: post.summary,
+    alternates: { canonical: `/posts/${slug}` },
+    // A child's openGraph replaces the layout's, so siteName is repeated.
+    openGraph: {
+      type: "article",
+      siteName: "Blog",
+      title: post.title,
+      description: post.summary,
+      publishedTime: post.published_at,
+      modifiedTime: post.updated_at,
+      tags: post.tags.map((tag) => tag.name),
+      url: `/posts/${slug}`,
+    },
+  };
 }
 
 export default function PostPage({ params }: Props) {

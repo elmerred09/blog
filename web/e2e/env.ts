@@ -27,6 +27,8 @@ const WEB_KEYS = [
   "BETTER_AUTH_URL",
   "GITHUB_CLIENT_ID",
   "GITHUB_CLIENT_SECRET",
+  "SITE_URL",
+  "SITE_INDEXING",
 ] as const;
 
 type ApiKey = (typeof API_KEYS)[number];

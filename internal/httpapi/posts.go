@@ -99,6 +99,30 @@ func listPosts(posts *post.Service) gin.HandlerFunc {
 	}
 }
 
+type sitemapItemJSON struct {
+	Slug         string    `json:"slug"`
+	LastModified time.Time `json:"last_modified"`
+}
+
+type sitemapJSON struct {
+	Items []sitemapItemJSON `json:"items"`
+}
+
+func getSitemap(posts *post.Service) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		entries, err := posts.SitemapEntries(c.Request.Context())
+		if err != nil {
+			internalError(c, err)
+			return
+		}
+		resp := sitemapJSON{Items: make([]sitemapItemJSON, len(entries))}
+		for i, e := range entries {
+			resp.Items[i] = sitemapItemJSON{Slug: e.Slug, LastModified: e.LastModified.UTC()}
+		}
+		c.JSON(http.StatusOK, resp)
+	}
+}
+
 func getPost(posts *post.Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		p, err := posts.Get(c.Request.Context(), c.Param("slug"))

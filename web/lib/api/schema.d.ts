@@ -72,6 +72,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sitemap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every published post, newest first, for the sitemap. At most 50000. No pagination. */
+        get: operations["listSitemapEntries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/search": {
         parameters: {
             query?: never;
@@ -226,6 +243,18 @@ export interface components {
             body_html: string;
             /** Format: date-time */
             updated_at: string;
+        };
+        SitemapEntry: {
+            slug: string;
+            /**
+             * Format: date-time
+             * @description The later of updated_at and published_at, when the post last changed for a reader.
+             */
+            last_modified: string;
+        };
+        SitemapPage: {
+            /** @description Published posts, newest first. At most 50000. Empty, never null. */
+            items: components["schemas"]["SitemapEntry"][];
         };
         Page: {
             items: components["schemas"]["PostListItem"][];
@@ -545,6 +574,28 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Timeout"];
+        };
+    };
+    listSitemapEntries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The entries. Empty when nothing is published. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SitemapPage"];
+                };
+            };
             500: components["responses"]["Internal"];
             503: components["responses"]["Timeout"];
         };

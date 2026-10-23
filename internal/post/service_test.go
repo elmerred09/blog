@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/elmerred09/blog/internal/platform/db/dbtest"
@@ -364,4 +365,69 @@ func TestListBackward(t *testing.T) {
 			}
 		}
 	})
+}
+
+func TestSitemapEntries(t *testing.T) {
+	t.Parallel()
+	pool, _ := env.NewDB(t)
+	now := dbtest.Now(t, pool).Truncate(time.Microsecond)
+
+	// Edited after it was published: last_modified is the edit.
+	editedAt := now.Add(-time.Hour)
+	edited := dbtest.InsertPost(t, pool, dbtest.WithSlug("edited"), dbtest.PublishedAt(now.Add(-2*time.Hour)))
+	setPostTimes(t, pool, edited.ID, now.Add(-2*time.Hour), editedAt)
+
+	// Edited while scheduled, then published: last_modified is published_at,
+	// the moment a reader could first see it.
+	publishedAt := now.Add(-30 * time.Minute)
+	wentLive := dbtest.InsertPost(t, pool, dbtest.WithSlug("went-live"), dbtest.PublishedAt(publishedAt))
+	setPostTimes(t, pool, wentLive.ID, publishedAt, now.Add(-3*time.Hour))
+
+	olderAt := now.Add(-5 * time.Hour)
+	older := dbtest.InsertPost(t, pool, dbtest.WithSlug("older"), dbtest.PublishedAt(olderAt))
+	setPostTimes(t, pool, older.ID, olderAt, olderAt)
+
+	dbtest.InsertPost(t, pool, dbtest.WithSlug("draft"), dbtest.Draft())
+	dbtest.InsertPost(t, pool, dbtest.WithSlug("scheduled"), dbtest.ScheduledIn(time.Hour))
+	dbtest.InsertPost(t, pool, dbtest.WithSlug("deleted"), dbtest.PublishedAt(now.Add(-time.Minute)), dbtest.Deleted())
+
+	got, err := post.NewService(pool).SitemapEntries(t.Context())
+	if err != nil {
+		t.Fatalf("SitemapEntries: %v", err)
+	}
+	if len(got) != 3 {
+		t.Fatalf("len = %d, want 3 published posts; got %+v", len(got), got)
+	}
+	if got[0].Slug != "went-live" || !got[0].LastModified.Equal(publishedAt) {
+		t.Errorf("first = %+v, want went-live at %v", got[0], publishedAt)
+	}
+	if got[1].Slug != "edited" || !got[1].LastModified.Equal(editedAt) {
+		t.Errorf("second = %+v, want edited at %v", got[1], editedAt)
+	}
+	if got[2].Slug != "older" || !got[2].LastModified.Equal(olderAt) {
+		t.Errorf("third = %+v, want older at %v", got[2], olderAt)
+	}
+}
+
+func TestSitemapEntriesEmpty(t *testing.T) {
+	t.Parallel()
+	pool, _ := env.NewDB(t)
+
+	got, err := post.NewService(pool).SitemapEntries(t.Context())
+	if err != nil {
+		t.Fatalf("SitemapEntries: %v", err)
+	}
+	if got == nil || len(got) != 0 {
+		t.Errorf("entries = %#v, want a non-nil empty slice", got)
+	}
+}
+
+func setPostTimes(t *testing.T, pool *pgxpool.Pool, id uuid.UUID, published, updated time.Time) {
+	t.Helper()
+	_, err := pool.Exec(t.Context(),
+		`UPDATE posts SET published_at = $2, updated_at = $3 WHERE id = $1`,
+		id, published, updated)
+	if err != nil {
+		t.Fatalf("set times: %v", err)
+	}
 }

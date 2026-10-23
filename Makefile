@@ -47,6 +47,9 @@ PRETTIER := ./node_modules/.bin/prettier
 CHROMA_CSS := $(WEB)/app/chroma.css
 # Go API base URL for `make web`; matches the API's default HTTP_ADDR.
 API_URL ?= http://localhost:8080
+# Baked into prerendered metadata. Production sets the real domain at build
+# time; SITE_INDEXING=true is the only value that lets robots.txt allow crawling.
+SITE_URL ?= http://localhost:3000
 # Files for web-fmt, relative to web/ or absolute; override with WEB_FILES="app/page.tsx".
 WEB_FILES ?= .
 
@@ -192,12 +195,12 @@ web-deps:
 # OTEL=1 exports traces to make otel-up. Unset, Next exports nothing.
 # NEXT_OTEL_VERBOSE=1 adds the spans Next hides by default.
 web: web-deps
-	cd $(WEB) && API_URL="$(API_URL)" \
+	cd $(WEB) && API_URL="$(API_URL)" SITE_URL="$(SITE_URL)" \
 		$(if $(filter 1,$(OTEL)),OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 OTEL_SERVICE_NAME=blog-web,) \
 		npm run dev
 
 web-build: web-deps
-	cd $(WEB) && npm run build
+	cd $(WEB) && SITE_URL="$(SITE_URL)" npm run build
 
 web-lint: web-deps
 	cd $(WEB) && npm run --silent lint

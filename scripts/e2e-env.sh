@@ -55,6 +55,10 @@ S3_PUBLIC_BASE_URL="http://$s3_host/$S3_BUCKET"
 # Next. Every key web/.env.local can set must be here: Next loads that file
 # under next start too, and only process env wins over it.
 API_URL="http://127.0.0.1:$api_port"
+# The production build bakes this into sitemap and metadata URLs.
+SITE_URL="http://localhost:$web_port"
+# Indexing stays off, so robots.txt disallows the whole site.
+SITE_INDEXING="false"
 ADMIN_GITHUB_IDS="$github_id"
 ADMIN_JWT_PRIVATE_KEY="$(one_line "$dir/private.pem")"
 BETTER_AUTH_SECRET="$(openssl rand -hex 32)"

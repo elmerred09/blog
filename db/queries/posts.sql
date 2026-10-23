@@ -97,6 +97,28 @@ WHERE deleted_at IS NULL
 ORDER BY id ASC
 LIMIT sqlc.arg(page_size);
 
+-- name: ListSitemapPosts :many
+-- A seq scan is acceptable. Nearly every row is published, and slug and
+-- updated_at are not in posts_pagination_idx, so walking that index and
+-- fetching the heap costs more than reading the table (about 9ms and an
+-- in-memory quicksort on the 10k seed; forcing the index was slower).
+-- A covering index would be an index-only scan a few milliseconds faster,
+-- which is not worth a migration for a list cached for hours.
+-- last_modified is the later of updated_at and published_at. A post can be
+-- edited while it is still scheduled, so updated_at can be earlier than the
+-- moment a reader can see it, which is published_at. An edit after that
+-- moves updated_at past published_at. GREATEST is that later moment.
+-- Postgres ignores nulls in GREATEST, and updated_at is NOT NULL, so the
+-- value is never null. COALESCE is there so sqlc's type is time.Time.
+-- 50000 is one sitemap file's URL limit. Nothing pages past it.
+SELECT slug,
+       COALESCE(GREATEST(updated_at, published_at), updated_at) AS last_modified
+FROM posts
+WHERE published_at <= CURRENT_TIMESTAMP
+  AND deleted_at IS NULL
+ORDER BY published_at DESC, id DESC
+LIMIT 50000;
+
 -- name: SoftDeletePost :one
 -- index: posts_pkey (id).
 UPDATE posts
