@@ -40,12 +40,18 @@ func TestReadyz(t *testing.T) {
 	t.Run("database reachable", func(t *testing.T) {
 		t.Parallel()
 		pool, _ := env.NewDB(t)
-		log, _ := testLogger()
+		// Connect before the probe. readyz gives the ping 2s, and on a loaded
+		// runner the first dial and auth can outlast that, so the probe
+		// reports the database down before it has been reached.
+		if err := pool.Ping(t.Context()); err != nil {
+			t.Fatalf("ping: %v", err)
+		}
+		log, buf := testLogger()
 
 		rec := get(t, New(Deps{Logger: log, DB: pool}), "/readyz")
 
 		if rec.Code != http.StatusOK {
-			t.Fatalf("status = %d, want 200; body %s", rec.Code, rec.Body)
+			t.Fatalf("status = %d, want 200; body %s; error %v", rec.Code, rec.Body, requestLine(t, buf)["error"])
 		}
 		if got := decode[healthBody](t, rec); got.Status != "ok" {
 			t.Errorf("status field = %q, want ok", got.Status)
