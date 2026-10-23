@@ -400,6 +400,9 @@ function Button({
       aria-pressed={pressed}
       title={shortcut ? `${label} (${shortcut})` : label}
       disabled={disabled}
+      // A mousedown would move focus to the button. Tiptap then waits a frame
+      // to focus the editor again, and a keystroke in that frame is lost.
+      onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
       className="min-w-8 rounded px-1.5 py-1 text-sm text-zinc-700 hover:bg-zinc-100 disabled:opacity-40 aria-pressed:bg-zinc-200 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:aria-pressed:bg-zinc-700"
     >

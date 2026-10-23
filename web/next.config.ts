@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // The production image runs this server.js. next start still works for CI and e2e.
+  // Deploy and e2e run .next/standalone/server.js. next start warns once
+  // this is set, and it is not the server the image runs.
   output: "standalone",
   cacheComponents: true,
   partialPrefetching: true,

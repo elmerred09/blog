@@ -83,6 +83,15 @@ describe("Editor", () => {
     ).toBe("true");
   });
 
+  it("keeps a toolbar press from taking focus", async () => {
+    await setup();
+
+    // fireEvent returns false when the handler calls preventDefault.
+    expect(
+      fireEvent.mouseDown(screen.getByRole("button", { name: "Code block" })),
+    ).toBe(false);
+  });
+
   it("sets a code block's language", async () => {
     const { onChange } = await setup();
 

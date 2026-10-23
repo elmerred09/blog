@@ -79,9 +79,9 @@ function pick<K extends string>(
   >;
 }
 
-// Next loads web/.env.local under next build and next start as well, and
-// only process env wins over it, so any key it sets that the suite doesn't
-// would reach the test server with the developer's real value.
+// Next loads web/.env.local during next build, and only process env wins
+// over it. A key the suite doesn't override would be baked into the build.
+// The standalone server then uses the env Playwright passes.
 function assertShadowsDevEnv(web: Record<WebKey, string>) {
   if (!existsSync(DEV_ENV_FILE)) {
     return;

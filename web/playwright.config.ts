@@ -5,6 +5,7 @@ import { readE2EEnv } from "./e2e/env";
 
 const env = readE2EEnv();
 const baseURL = env.web.BETTER_AUTH_URL;
+const port = new URL(baseURL).port;
 const ci = !!process.env.CI;
 
 export default defineConfig({
@@ -55,10 +56,19 @@ export default defineConfig({
     {
       name: "web",
       // A production build, because "use cache" and updateTag only behave as
-      // they do in production under next start. Built here so the build sees
-      // the same env as the server. next directly, not npx: killing npx left
-      // next-server holding the port.
-      command: `node_modules/.bin/next build && node_modules/.bin/next start -p ${new URL(baseURL).port}`,
+      // they do in production. Built here so the build sees the same env as
+      // the server. The process is standalone's server.js, which is what the
+      // image runs; next start warns when output is standalone. public,
+      // .next/static, and the Open Graph fonts are not traced, so copy them
+      // the way the image does.
+      command: [
+        "node_modules/.bin/next build",
+        "cp -r public .next/standalone/",
+        "cp -r .next/static .next/standalone/.next/",
+        "mkdir -p .next/standalone/assets",
+        "cp -r assets/fonts .next/standalone/assets/",
+        `PORT=${port} node .next/standalone/server.js`,
+      ].join(" && "),
       env: env.web,
       // Not / or /search: requesting either before the fixtures project runs
       // would cache an empty post list.
