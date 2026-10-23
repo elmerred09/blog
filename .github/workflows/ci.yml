@@ -101,9 +101,9 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
 
-      # Runs on a cache hit too: --with-deps also installs the system
-      # libraries, which the cache doesn't hold.
-      - run: make e2e-install E2E_INSTALL_FLAGS=--with-deps
+      # The runner already has Chromium's libraries. --with-deps apt-installs
+      # fonts on top of that, and that download dominated the job.
+      - run: make e2e-install
       - run: make e2e
 
       - uses: actions/upload-artifact@v7

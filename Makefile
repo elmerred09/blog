@@ -30,7 +30,7 @@ E2E_DB := blog_e2e
 E2E_DBSTRING := postgres://blog:blog@localhost:5432/$(E2E_DB)?sslmode=disable
 # Extra arguments for playwright test, e.g. E2E_ARGS="admin-editor --headed".
 E2E_ARGS ?=
-# Extra flags for playwright install; CI adds --with-deps.
+# Extra flags for playwright install, e.g. --with-deps on a distro missing Chromium's libraries.
 E2E_INSTALL_FLAGS ?=
 
 # Seed file for `make seed`: a name in db/seed without the .sql suffix, e.g. SEED=posts-tags.
