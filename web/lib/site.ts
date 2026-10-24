@@ -1,3 +1,5 @@
+export const siteName = "Bits from Elmer";
+
 // siteUrl is baked into prerendered metadata, so production must set it at
 // build time. A later change of domain means rebuilding.
 const devSiteURL = "http://localhost:3000";

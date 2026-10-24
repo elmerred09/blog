@@ -3,8 +3,9 @@ import { notFound } from "next/navigation";
 import { getPost } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import { ogImage, ogSize } from "@/lib/og";
+import { siteName } from "@/lib/site";
 
-export const alt = "Blog post";
+export const alt = siteName;
 export const size = ogSize;
 export const contentType = "image/png";
 

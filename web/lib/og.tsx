@@ -2,6 +2,8 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
 
+import { siteName } from "@/lib/site";
+
 export const ogSize = { width: 1200, height: 630 };
 
 const fontDir = join(process.cwd(), "assets/fonts");
@@ -39,7 +41,7 @@ export function ogImage(title: string, detail: string): ImageResponse {
       }}
     >
       <div style={{ display: "flex", fontSize: 32, color: "#52525b" }}>
-        Blog
+        {siteName}
       </div>
       <div
         style={{

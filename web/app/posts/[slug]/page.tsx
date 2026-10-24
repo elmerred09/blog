@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { PostBody } from "@/components/post-body";
 import { PostMeta } from "@/components/post-meta";
 import { getPost } from "@/lib/api";
+import { siteName } from "@/lib/site";
 
 type Props = PageProps<"/posts/[slug]">;
 
@@ -21,7 +22,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     // A child's openGraph replaces the layout's, so siteName is repeated.
     openGraph: {
       type: "article",
-      siteName: "Blog",
+      siteName,
       title: post.title,
       description: post.summary,
       publishedTime: post.published_at,

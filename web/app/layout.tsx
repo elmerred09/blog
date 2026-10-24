@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 
-import { siteUrl } from "@/lib/site";
+import { siteName, siteUrl } from "@/lib/site";
 
 import "./globals.css";
 
@@ -20,10 +20,10 @@ const description = "A technical blog about software development.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
-  title: { default: "Blog", template: "%s | Blog" },
+  title: { default: siteName, template: `%s | ${siteName}` },
   description,
   openGraph: {
-    siteName: "Blog",
+    siteName,
     type: "website",
     locale: "en_US",
     description,
@@ -40,7 +40,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col font-sans">
         <header className="mx-auto flex w-full max-w-3xl items-baseline justify-between px-6 pt-10">
           <Link href="/" className="text-lg font-semibold tracking-tight">
-            Blog
+            {siteName}
           </Link>
           <nav>
             <Link
