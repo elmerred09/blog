@@ -40,7 +40,7 @@ jobs:
 
       # Integration tests start Postgres through testcontainers; the runner has Docker.
       - name: Pre-pull Postgres image
-        run: docker pull postgres:18
+        run: docker pull postgres:18.6
       - run: make test
 
   web:

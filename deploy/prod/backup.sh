@@ -33,9 +33,17 @@ r2() {
 		"$@"
 }
 
+# pg_dump must finish before anything is uploaded. Piped into aws s3 cp, a
+# dump that dies partway still becomes today's object, and pipefail fails
+# the script only after that object has replaced a good dump. The table of
+# contents is at the front of a custom-format archive, so pg_restore --list
+# accepts one that died while writing data. Reading it through does not.
 stamp=$(date -u +%Y%m%d)
-docker compose exec -T postgres pg_dump -U blog -Fc --no-owner --no-acl blog |
-	r2 s3 cp - "s3://${S3_BUCKET}/blog-${stamp}.dump"
+dump=$(mktemp)
+trap 'rm -f "$dump"' EXIT
+docker compose exec -T postgres pg_dump -U blog -Fc --no-owner --no-acl blog >"$dump"
+docker compose exec -T postgres pg_restore --file=/dev/null <"$dump"
+r2 s3 cp - "s3://${S3_BUCKET}/blog-${stamp}.dump" <"$dump"
 
 cutoff=$(date -u -d '14 days ago' +%Y%m%d)
 r2 s3api list-objects-v2 \

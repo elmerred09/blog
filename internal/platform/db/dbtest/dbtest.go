@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	image = "postgres:18"
+	image = "postgres:18.6"
 	// initDB is created by the container's entrypoint. Nothing uses it; it
 	// just must not be templateName, which createTemplate creates itself.
 	initDB       = "blog"

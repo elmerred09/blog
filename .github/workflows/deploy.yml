@@ -17,12 +17,14 @@ permissions:
   packages: write
 
 # A deploy finishes even if another push lands while it is running.
+# A workflow_run that is no longer the tip of main is skipped once it starts.
 concurrency:
   group: deploy
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  current:
+    name: Check this push is still the tip of main
     # branches above matches the CI head branch. A fork pull request from a
     # branch named main would otherwise check out that commit and start it here.
     if: >-
@@ -31,7 +33,9 @@ jobs:
        github.event.workflow_run.event == 'push' &&
        github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    outputs:
+      sha: ${{ steps.sha.outputs.sha }}
+      deploy: ${{ steps.tip.outputs.deploy }}
     env:
       DEPLOY_SHA: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.sha || github.event.workflow_run.head_sha || github.sha }}
     steps:
@@ -47,7 +51,39 @@ jobs:
           ref: ${{ env.DEPLOY_SHA }}
 
       - name: Use the full commit
-        run: echo "DEPLOY_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+        id: sha
+        run: |
+          sha=$(git rev-parse HEAD)
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "DEPLOY_SHA=$sha" >> "$GITHUB_ENV"
+
+      - name: Compare with the tip of main
+        id: tip
+        run: |
+          if [ "$GITHUB_EVENT_NAME" != "workflow_run" ]; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          tip=$(git rev-parse refs/remotes/origin/main)
+          if [ "$DEPLOY_SHA" = "$tip" ]; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "deploy=false" >> "$GITHUB_OUTPUT"
+          echo "$DEPLOY_SHA is not the tip of main ($tip); skipping this deploy"
+
+  deploy:
+    needs: current
+    if: needs.current.outputs.deploy == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DEPLOY_SHA: ${{ needs.current.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
 
       - name: Require SITE_URL
         run: test -n "${{ vars.SITE_URL }}"
@@ -160,4 +196,6 @@ jobs:
             -k --resolve "${domain}:443:127.0.0.1" \
             "https://${domain}/" >/dev/null
           echo "smoke ok"
+          # In-use images stay. A rollback builds that SHA from GHCR again.
+          docker image prune -af --filter "until=168h"
           EOF
