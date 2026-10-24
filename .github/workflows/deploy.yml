@@ -23,7 +23,13 @@ concurrency:
 
 jobs:
   deploy:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    # branches above matches the CI head branch. A fork pull request from a
+    # branch named main would otherwise check out that commit and start it here.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -138,9 +144,17 @@ jobs:
           cd /srv/blog
           printf 'IMAGE_TAG=%s\n' "$DEPLOY_SHA" > .env
           docker compose --profile tools pull
-          docker compose --profile tools run --rm migrate up
+          # compose run keeps stdin open and would consume the rest of this
+          # script, so the site would never be started.
+          docker compose --profile tools run --rm migrate up </dev/null
           docker compose up -d
+          # Compose strips one pair of quotes from an env file. Match that,
+          # or curl rejects https://"example.dev"/ as a bad hostname.
           domain=$(sed -n 's/^DOMAIN=//p' caddy.env)
+          domain=${domain%\"}
+          domain=${domain#\"}
+          domain=${domain%\'}
+          domain=${domain#\'}
           test -n "$domain"
           curl -fsS --retry 5 --retry-connrefused --retry-delay 3 \
             -k --resolve "${domain}:443:127.0.0.1" \
