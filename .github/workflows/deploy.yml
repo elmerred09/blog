@@ -192,7 +192,9 @@ jobs:
           domain=${domain%\'}
           domain=${domain#\'}
           test -n "$domain"
-          curl -fsS --retry 5 --retry-connrefused --retry-delay 3 \
+          # compose reports Caddy started before it is accepting TLS. A handshake
+          # reset is not "connection refused", so retry every curl error.
+          curl -fsS --retry 5 --retry-all-errors --retry-delay 3 \
             -k --resolve "${domain}:443:127.0.0.1" \
             "https://${domain}/" >/dev/null
           echo "smoke ok"
