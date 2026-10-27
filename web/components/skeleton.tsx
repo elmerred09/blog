@@ -79,3 +79,47 @@ export function PostListSkeleton() {
     </div>
   );
 }
+
+const postBodyLines = [
+  ["full", "w-full"],
+  ["full-2", "w-full"],
+  ["long", "w-11/12"],
+  ["shorter", "w-4/5"],
+] as const;
+
+// Stand-in for the post page: the date, title, and tags, then a short article.
+export function PostSkeleton() {
+  return (
+    <article
+      aria-busy="true"
+      className="relative mx-auto max-w-3xl overflow-hidden"
+    >
+      <p className="sr-only" role="status">
+        Loading post…
+      </p>
+      <header className="mb-12 space-y-4">
+        <div aria-hidden="true" className="h-3 w-24 rounded-sm bg-line" />
+        <div aria-hidden="true" className="h-12 w-3/5 rounded-sm bg-line" />
+        <div aria-hidden="true" className="flex gap-2 pt-2">
+          <div className="h-6 w-16 rounded-md bg-line" />
+          <div className="h-6 w-20 rounded-md bg-line" />
+        </div>
+      </header>
+      <div aria-hidden="true" className="space-y-3">
+        {postBodyLines.map(([key, width]) => (
+          <div key={key} className={`h-4 rounded-sm bg-line ${width}`} />
+        ))}
+      </div>
+      <div
+        aria-hidden="true"
+        className="mt-10 mb-4 h-8 w-1/2 rounded-sm bg-line"
+      />
+      <div aria-hidden="true" className="space-y-3">
+        <div className="h-4 w-full rounded-sm bg-line" />
+        <div className="h-4 w-full rounded-sm bg-line" />
+        <div className="h-4 w-2/3 rounded-sm bg-line" />
+      </div>
+      <Shimmer />
+    </article>
+  );
+}

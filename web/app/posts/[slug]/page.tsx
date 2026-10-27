@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { PostBody } from "@/components/post-body";
+import { PostSkeleton } from "@/components/skeleton";
 import { TagList } from "@/components/tag-list";
 import { getPost } from "@/lib/api";
 import { formatDate } from "@/lib/format";
@@ -36,7 +37,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default function PostPage({ params }: Props) {
   return (
-    <Suspense fallback={<p className="text-muted">Loading post…</p>}>
+    <Suspense fallback={<PostSkeleton />}>
       <PostArticle params={params} />
     </Suspense>
   );
