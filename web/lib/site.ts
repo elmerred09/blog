@@ -1,4 +1,4 @@
-export const siteName = "Bits from Elmer";
+export const siteName = "Bits by Elmer";
 
 // siteUrl is baked into prerendered metadata, so production must set it at
 // build time. A later change of domain means rebuilding.
