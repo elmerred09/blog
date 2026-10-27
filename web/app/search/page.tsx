@@ -15,12 +15,12 @@ export const metadata: Metadata = {
 
 export default function SearchPage({ searchParams }: PageProps<"/search">) {
   return (
-    <>
-      <h1 className="mb-6 text-3xl font-bold tracking-tight">Search</h1>
+    <div className="mx-auto max-w-3xl">
+      <h1 className="mb-10 text-5xl font-semibold tracking-tight">Search</h1>
       <Suspense fallback={<SearchForm defaultQuery="" />}>
         <Search searchParams={searchParams} />
       </Suspense>
-    </>
+    </div>
   );
 }
 
@@ -41,7 +41,7 @@ async function Search({
       <SearchForm key={query} defaultQuery={query} />
       {query !== "" && (
         <div className="mt-10">
-          <Suspense fallback={<p className="text-zinc-500">Searching…</p>}>
+          <Suspense fallback={<p className="text-muted">Searching…</p>}>
             <Results query={query} />
           </Suspense>
         </div>
@@ -54,7 +54,7 @@ async function Results({ query }: { query: string }) {
   const results = await searchPosts({ q: query });
   if (results === null) {
     return (
-      <p className="text-zinc-500 dark:text-zinc-400">
+      <p className="text-muted">
         That search can&apos;t be run. Try a shorter one.
       </p>
     );

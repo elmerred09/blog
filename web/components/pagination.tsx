@@ -15,7 +15,7 @@ export function Pagination({ prevCursor, nextCursor, pathname = "/" }: Props) {
       {prevCursor !== null && (
         <Link
           href={{ pathname, query: { cursor: prevCursor } }}
-          className="font-medium text-zinc-900 underline-offset-4 hover:underline dark:text-zinc-100"
+          className="rounded-full border border-line bg-card px-4 py-1.5 text-sm font-medium hover:border-line-strong"
         >
           Newer posts
         </Link>
@@ -23,7 +23,7 @@ export function Pagination({ prevCursor, nextCursor, pathname = "/" }: Props) {
       {nextCursor !== null && (
         <Link
           href={{ pathname, query: { cursor: nextCursor } }}
-          className="font-medium text-zinc-900 underline-offset-4 hover:underline dark:text-zinc-100"
+          className="rounded-full border border-line bg-card px-4 py-1.5 text-sm font-medium hover:border-line-strong"
         >
           Older posts
         </Link>

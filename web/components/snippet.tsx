@@ -11,12 +11,12 @@ export function Snippet({ fragments }: Props) {
     return null;
   }
   return (
-    <p className="text-zinc-700 dark:text-zinc-300">
+    <p className="text-sm leading-relaxed text-muted">
       {fragments.map((f, i) =>
         f.match ? (
           <mark
             key={i}
-            className="rounded-sm bg-amber-200 px-0.5 text-inherit dark:bg-amber-700/60"
+            className="rounded-sm bg-chip px-0.5 font-medium text-brand-strong"
           >
             {f.text}
           </mark>
