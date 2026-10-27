@@ -17,6 +17,8 @@ This Next is newer than most training data. Before using an API you aren't sure 
 - Cached functions can't read `cookies()`, `headers()`, or `searchParams`. Read those outside the cache, inside a `<Suspense>` boundary, and pass plain values in as arguments.
 - `params` and `searchParams` are Promises in pages and layouts. Pass the Promise into a component wrapped in `<Suspense>` and `await` it there, so the rest of the page can prerender.
 - A cached function whose arguments are known at build time runs during `next build`. Keep API calls keyed by `params` or `searchParams` (and no `generateStaticParams`), so the build doesn't need a running Go API.
+- A page component that calls a cached function with no request-derived arguments (e.g. `listTags()`) must `await io()` (from `next/cache`) before the call, inside `<Suspense>`. `io()` stops only the build's prerender; prefetches still include the content. Use `connection()` only where a real request is required, such as a route handler like `sitemap.ts`. Docs: `docs/01-app/03-api-reference/04-functions/io.md`.
+- A section the page can live without (like the home page's topic column) catches its API error in the component and renders nothing, instead of letting it reach `error.tsx`. Catch outside the `"use cache"` function: a returned fallback is cached, a throw isn't.
 - Turbopack is the bundler for dev and build; Tailwind runs as a Turbopack CSS loader (`@tailwindcss/turbopack`), not through PostCSS.
 - Formatting is Prettier with `prettier-plugin-tailwindcss` (class order); ESLint uses `eslint-config-next` with `eslint-config-prettier` last.
 - Run tools through `make web-*` from the repo root (see AGENTS.md), not bare `npm`/`npx`: the Makefile puts the right Node on `PATH`.

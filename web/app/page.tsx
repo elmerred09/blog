@@ -1,10 +1,11 @@
+import { io } from "next/cache";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { Pagination } from "@/components/pagination";
 import { PostList } from "@/components/post-list";
 import { TopicList } from "@/components/topic-list";
-import { listPosts, listTags } from "@/lib/api";
+import { listPosts, listTags, type Tag } from "@/lib/api";
 
 export default function Home({ searchParams }: PageProps<"/">) {
   return (
@@ -13,7 +14,7 @@ export default function Home({ searchParams }: PageProps<"/">) {
         Recent Bits
       </h1>
       <div className="mb-14 lg:col-start-1 lg:row-start-2 lg:mb-0">
-        <Suspense>
+        <Suspense fallback={<p className="text-muted">Loading topics…</p>}>
           <Topics />
         </Suspense>
       </div>
@@ -27,7 +28,20 @@ export default function Home({ searchParams }: PageProps<"/">) {
 }
 
 async function Topics() {
-  return <TopicList tags={await listTags()} />;
+  // listTags has no arguments, so next build would call the API to prerender
+  // it. io() stops the prerender here but still lets prefetches include it.
+  await io();
+  // The column is optional: an API error hides it rather than replacing the
+  // page with error.tsx. Caught here, not in listTags, so the failure isn't
+  // cached.
+  let tags: Tag[];
+  try {
+    tags = await listTags();
+  } catch (err) {
+    console.error("list tags for the home page", err);
+    return null;
+  }
+  return <TopicList tags={tags} />;
 }
 
 async function Posts({
