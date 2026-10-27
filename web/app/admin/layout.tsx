@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 // doesn't guard a page's data or its server actions.
 export default function AdminLayout({ children }: LayoutProps<"/admin">) {
   return (
-    <>
+    <div className="mx-auto max-w-3xl">
       <div className="mb-8 flex items-center justify-between border-b border-zinc-200 pb-4 text-sm dark:border-zinc-800">
         <Link href="/admin" className="font-medium">
           Editor
@@ -26,7 +26,7 @@ export default function AdminLayout({ children }: LayoutProps<"/admin">) {
         </Suspense>
       </div>
       {children}
-    </>
+    </div>
   );
 }
 
