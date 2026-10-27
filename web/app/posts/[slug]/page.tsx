@@ -3,8 +3,9 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { PostBody } from "@/components/post-body";
-import { PostMeta } from "@/components/post-meta";
+import { TagList } from "@/components/tag-list";
 import { getPost } from "@/lib/api";
+import { formatDate } from "@/lib/format";
 import { siteName } from "@/lib/site";
 
 type Props = PageProps<"/posts/[slug]">;
@@ -35,7 +36,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default function PostPage({ params }: Props) {
   return (
-    <Suspense fallback={<p className="text-zinc-500">Loading post…</p>}>
+    <Suspense fallback={<p className="text-muted">Loading post…</p>}>
       <PostArticle params={params} />
     </Suspense>
   );
@@ -49,10 +50,18 @@ async function PostArticle({ params }: { params: Props["params"] }) {
   }
 
   return (
-    <article>
-      <header className="mb-10 space-y-3">
-        <h1 className="text-3xl font-bold tracking-tight">{post.title}</h1>
-        <PostMeta publishedAt={post.published_at} tags={post.tags} />
+    <article className="mx-auto max-w-3xl">
+      <header className="mb-12 space-y-4">
+        <time
+          dateTime={post.published_at}
+          className="block text-xs text-subtle"
+        >
+          {formatDate(post.published_at)}
+        </time>
+        <h1 className="text-5xl leading-[1.1] font-semibold tracking-tight">
+          {post.title}
+        </h1>
+        <TagList tags={post.tags} className="pt-2" />
       </header>
       <PostBody html={post.body_html} />
     </article>

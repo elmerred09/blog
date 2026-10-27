@@ -1,0 +1,128 @@
+/* Temporary. chroma.css keeps its dark theme behind prefers-color-scheme, and
+   that file is generated, so this repeats the light colors when the system is
+   dark. Delete it once the stylesheet itself is light-only. */
+
+@media (prefers-color-scheme: dark) {
+  .bg {
+    color: inherit;
+    background-color: #f7f7f7;
+  }
+  .chroma {
+    color: inherit;
+    background-color: #f7f7f7;
+  }
+  /* The dark theme adds bold and italic that the light colors don't clear. */
+  .chroma span[class] {
+    font-weight: normal;
+    font-style: normal;
+    background-color: transparent;
+  }
+
+  .chroma .err {
+    color: #f6f8fa;
+    background-color: #82071e;
+  }
+  .chroma .lnlinks {
+    color: inherit;
+  }
+  .chroma .hl {
+    background-color: #dedede;
+  }
+  .chroma .lnt,
+  .chroma .ln {
+    color: #7f7f7f;
+  }
+  .chroma .k,
+  .chroma .kc,
+  .chroma .kd,
+  .chroma .kn,
+  .chroma .kp,
+  .chroma .kr,
+  .chroma .kt {
+    color: #cf222e;
+  }
+  .chroma .na,
+  .chroma .nc,
+  .chroma .nx,
+  .chroma .p,
+  .chroma .ge,
+  .chroma .go {
+    color: #1f2328;
+  }
+  .chroma .no,
+  .chroma .nd,
+  .chroma .nt,
+  .chroma .m,
+  .chroma .mb,
+  .chroma .mf,
+  .chroma .mh,
+  .chroma .mi,
+  .chroma .il,
+  .chroma .mo,
+  .chroma .o,
+  .chroma .ow,
+  .chroma .or {
+    color: #0550ae;
+  }
+  .chroma .ni,
+  .chroma .nb,
+  .chroma .nf,
+  .chroma .fm {
+    color: #6639ba;
+  }
+  .chroma .nl {
+    color: #990000;
+    font-weight: bold;
+  }
+  .chroma .nn {
+    color: #24292e;
+  }
+  .chroma .bp {
+    color: #6a737d;
+  }
+  .chroma .nv,
+  .chroma .vc,
+  .chroma .vg,
+  .chroma .vi,
+  .chroma .vm {
+    color: #953800;
+  }
+  .chroma .s,
+  .chroma .sa,
+  .chroma .sb,
+  .chroma .sc,
+  .chroma .dl,
+  .chroma .sd,
+  .chroma .s2,
+  .chroma .se,
+  .chroma .sh,
+  .chroma .si,
+  .chroma .sx,
+  .chroma .sr,
+  .chroma .s1 {
+    color: #0a3069;
+  }
+  .chroma .ss {
+    color: #032f62;
+  }
+  .chroma .c,
+  .chroma .ch,
+  .chroma .cm,
+  .chroma .c1,
+  .chroma .cs,
+  .chroma .cp,
+  .chroma .cpf {
+    color: #57606a;
+  }
+  .chroma .gd {
+    color: #82071e;
+    background-color: #ffebe9;
+  }
+  .chroma .gi {
+    color: #116329;
+    background-color: #dafbe1;
+  }
+  .chroma .w {
+    color: #ffffff;
+  }
+}
