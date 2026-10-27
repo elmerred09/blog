@@ -37,6 +37,22 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* One light streak across a skeleton. `backwards` holds the off-screen start
+   so the highlight is not sitting on the bars before it runs. Kept out of
+   `@theme inline`: that block inlines values and drops the keyframes. */
+@theme {
+  --animate-shimmer: shimmer 1.6s linear infinite backwards;
+
+  @keyframes shimmer {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(100%);
+    }
+  }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

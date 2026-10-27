@@ -4,6 +4,7 @@ import { Suspense } from "react";
 
 import { Pagination } from "@/components/pagination";
 import { PostList } from "@/components/post-list";
+import { PostListSkeleton, TopicListSkeleton } from "@/components/skeleton";
 import { TopicList } from "@/components/topic-list";
 import { listPosts, listTags, type Tag } from "@/lib/api";
 
@@ -14,12 +15,12 @@ export default function Home({ searchParams }: PageProps<"/">) {
         Recent Bits
       </h1>
       <div className="mb-14 lg:col-start-1 lg:row-start-2 lg:mb-0">
-        <Suspense fallback={<p className="text-muted">Loading topics…</p>}>
+        <Suspense fallback={<TopicListSkeleton />}>
           <Topics />
         </Suspense>
       </div>
       <div className="lg:col-start-2 lg:row-start-2">
-        <Suspense fallback={<p className="text-muted">Loading posts…</p>}>
+        <Suspense fallback={<PostListSkeleton />}>
           <Posts searchParams={searchParams} />
         </Suspense>
       </div>
