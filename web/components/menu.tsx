@@ -3,10 +3,16 @@
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 
+import { profiles } from "@/components/social-links";
+
 const items = [
   { href: "/", label: "Home" },
   { href: "/search", label: "Search" },
 ];
+
+// --card is translucent; the dropdown floats over page content, so it needs
+// an opaque base under the tint.
+const panel = "bg-background bg-[linear-gradient(var(--card),var(--card))]";
 
 export function Menu() {
   const [open, setOpen] = useState(false);
@@ -47,22 +53,38 @@ export function Menu() {
         {open ? "Close" : "Menu"}
       </button>
       {open && (
-        <ul
-          id={menuId}
-          className="absolute right-0 z-20 mt-2 w-32 space-y-2 rounded-lg border border-line bg-card p-5"
-        >
-          {items.map((item) => (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                onClick={() => setOpen(false)}
-                className="block cursor-pointer border-b border-line pb-2 text-sm transition-colors hover:border-black/40"
-              >
-                {item.label}
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <div id={menuId} className="absolute right-0 z-20 mt-2 w-56 space-y-2">
+          <ul
+            className={`space-y-2 rounded-lg border border-line p-5 ${panel}`}
+          >
+            {items.map((item) => (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  onClick={() => setOpen(false)}
+                  className="block cursor-pointer border-b border-line pb-2 text-sm transition-colors hover:border-black/40"
+                >
+                  {item.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <ul className="grid grid-cols-2 gap-2">
+            {profiles.map(({ name, href, icon: Icon }) => (
+              <li key={name}>
+                <a
+                  href={href}
+                  aria-label={name}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`flex h-12 items-center justify-center rounded-lg border border-line transition-colors hover:border-line-strong hover:text-brand ${panel}`}
+                >
+                  <Icon />
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );

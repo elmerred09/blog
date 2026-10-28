@@ -20,6 +20,19 @@ describe("Menu", () => {
     expect(button.getAttribute("aria-expanded")).toBe("true");
   });
 
+  it("links to the social profiles when opened", () => {
+    render(<Menu />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Menu" }));
+
+    expect(
+      screen.getByRole("link", { name: "LinkedIn" }).getAttribute("href"),
+    ).toBe("https://www.linkedin.com/in/egonzalez49/");
+    expect(
+      screen.getByRole("link", { name: "GitHub" }).getAttribute("href"),
+    ).toBe("https://github.com/elmerred09");
+  });
+
   it("closes when a link is chosen", () => {
     render(<Menu />);
 
