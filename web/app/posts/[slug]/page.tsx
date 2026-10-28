@@ -51,7 +51,7 @@ async function PostArticle({ params }: { params: Props["params"] }) {
   }
 
   return (
-    <article className="mx-auto max-w-3xl">
+    <article>
       <header className="mb-12 space-y-4">
         <time
           dateTime={post.published_at}

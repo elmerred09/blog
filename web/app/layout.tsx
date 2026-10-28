@@ -39,7 +39,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col font-sans">
-        <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 pt-8">
+        <header className="relative z-20 mx-auto flex w-full max-w-[calc(960px+3rem)] items-center justify-between px-6 pt-8">
           <Link href="/" className="text-xl font-semibold tracking-tight">
             {siteName}
           </Link>
@@ -47,7 +47,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <Menu />
           </nav>
         </header>
-        <main className="mx-auto w-full max-w-6xl flex-1 px-6 pt-24 pb-12">
+        <main className="mx-auto w-full max-w-[calc(960px+3rem)] flex-1 px-6 pt-24 pb-12">
           {children}
         </main>
       </body>

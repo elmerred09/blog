@@ -2,6 +2,7 @@ import { io } from "next/cache";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
+import { Intro } from "@/components/intro";
 import { Pagination } from "@/components/pagination";
 import { PostList } from "@/components/post-list";
 import { PostListSkeleton, TopicListSkeleton } from "@/components/skeleton";
@@ -10,21 +11,24 @@ import { listPosts, listTags, type Tag } from "@/lib/api";
 
 export default function Home({ searchParams }: PageProps<"/">) {
   return (
-    <div className="lg:grid lg:grid-cols-[20rem_minmax(0,1fr)] lg:gap-x-10">
-      <h1 className="mb-14 text-5xl font-semibold tracking-tight lg:col-start-2">
-        Recent Bits
-      </h1>
-      <div className="mb-14 lg:col-start-1 lg:row-start-2 lg:mb-0">
-        <Suspense fallback={<TopicListSkeleton />}>
-          <Topics />
-        </Suspense>
+    <>
+      <Intro />
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-x-10">
+        <h2 className="mb-8 text-3xl font-semibold tracking-tight">
+          Recent Bits
+        </h2>
+        <div className="mb-14 lg:col-start-2 lg:row-start-2 lg:mb-0">
+          <Suspense fallback={<TopicListSkeleton />}>
+            <Topics />
+          </Suspense>
+        </div>
+        <div className="lg:col-start-1 lg:row-start-2">
+          <Suspense fallback={<PostListSkeleton />}>
+            <Posts searchParams={searchParams} />
+          </Suspense>
+        </div>
       </div>
-      <div className="lg:col-start-2 lg:row-start-2">
-        <Suspense fallback={<PostListSkeleton />}>
-          <Posts searchParams={searchParams} />
-        </Suspense>
-      </div>
-    </div>
+    </>
   );
 }
 

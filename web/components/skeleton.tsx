@@ -90,10 +90,7 @@ const postBodyLines = [
 // Stand-in for the post page: the date, title, and tags, then a short article.
 export function PostSkeleton() {
   return (
-    <article
-      aria-busy="true"
-      className="relative mx-auto max-w-3xl overflow-hidden"
-    >
+    <article aria-busy="true" className="relative overflow-hidden">
       <p className="sr-only" role="status">
         Loading post…
       </p>
