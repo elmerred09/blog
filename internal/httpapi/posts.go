@@ -18,11 +18,12 @@ type tagJSON struct {
 }
 
 type listItemJSON struct {
-	Slug        string    `json:"slug"`
-	Title       string    `json:"title"`
-	Summary     string    `json:"summary"`
-	PublishedAt time.Time `json:"published_at"`
-	Tags        []tagJSON `json:"tags"`
+	Slug           string    `json:"slug"`
+	Title          string    `json:"title"`
+	Summary        string    `json:"summary"`
+	PublishedAt    time.Time `json:"published_at"`
+	ReadingMinutes int       `json:"reading_minutes"`
+	Tags           []tagJSON `json:"tags"`
 }
 
 type pageJSON struct {
@@ -43,11 +44,12 @@ func toListItemJSON(it post.ListItem) listItemJSON {
 		tags[i] = tagJSON(t)
 	}
 	return listItemJSON{
-		Slug:        it.Slug,
-		Title:       it.Title,
-		Summary:     it.Summary,
-		PublishedAt: it.PublishedAt.UTC(),
-		Tags:        tags,
+		Slug:           it.Slug,
+		Title:          it.Title,
+		Summary:        it.Summary,
+		PublishedAt:    it.PublishedAt.UTC(),
+		ReadingMinutes: it.ReadingMinutes,
+		Tags:           tags,
 	}
 }
 

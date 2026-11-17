@@ -10,6 +10,7 @@ const posts: PostListItem[] = [
     title: "Keyset pagination",
     summary: "Why OFFSET gets slow.",
     published_at: "2026-10-02T12:00:00Z",
+    reading_minutes: 7,
     tags: [{ slug: "postgres", name: "Postgres" }],
   },
   {
@@ -17,6 +18,7 @@ const posts: PostListItem[] = [
     title: "Hello, world",
     summary: "The first post.",
     published_at: "2026-10-01T12:00:00Z",
+    reading_minutes: 1,
     tags: [],
   },
 ];
@@ -42,12 +44,13 @@ describe("PostList", () => {
     expect(link.getAttribute("href")).toBe("/posts/keyset-pagination");
   });
 
-  it("shows the summary, date and tags", () => {
+  it("shows the summary, date, reading time and tags", () => {
     render(<PostList posts={posts} />);
 
     const first = screen.getAllByRole("article")[0];
     expect(within(first).getByText("Why OFFSET gets slow.")).toBeTruthy();
     expect(within(first).getByText("Oct 2, 2026")).toBeTruthy();
+    expect(within(first).getByText("7 min read")).toBeTruthy();
     expect(within(first).getByText("Postgres")).toBeTruthy();
   });
 

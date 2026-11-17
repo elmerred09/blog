@@ -14,7 +14,7 @@ import (
 
 const searchPosts = `-- name: SearchPosts :many
 WITH ranked AS (
-  SELECT p.id, p.slug, p.title, p.summary, p.published_at, p.body_md, p.search_vector, q.query,
+  SELECT p.id, p.slug, p.title, p.summary, p.published_at, p.word_count, p.body_md, p.search_vector, q.query,
     -- Normalization 1 divides by 1 + log(length): a long post that mentions a
     -- term in passing ranks below a short post about it, without burying long
     -- posts the way 2 (divide by length) does.
@@ -27,7 +27,7 @@ WITH ranked AS (
   ORDER BY rank DESC, p.published_at DESC, p.id DESC
   LIMIT $2::int
 )
-SELECT id, slug, title, summary, published_at,
+SELECT id, slug, title, summary, published_at, word_count,
   -- Weight C is the body (see the posts migration). When only the title or
   -- summary matched, a headline would be the body's first few words with no
   -- highlight, so return '' and let the client show the summary.
@@ -52,6 +52,7 @@ type SearchPostsRow struct {
 	Title       string
 	Summary     string
 	PublishedAt *time.Time
+	WordCount   int32
 	Snippet     string
 }
 
@@ -75,6 +76,7 @@ func (q *Queries) SearchPosts(ctx context.Context, arg SearchPostsParams) ([]Sea
 			&i.Title,
 			&i.Summary,
 			&i.PublishedAt,
+			&i.WordCount,
 			&i.Snippet,
 		); err != nil {
 			return nil, err

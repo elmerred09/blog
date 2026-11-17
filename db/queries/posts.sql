@@ -1,6 +1,6 @@
 -- name: GetPostBySlug :one
 -- index: posts_slug_key (unique on slug).
-SELECT id, slug, title, summary, body_html, published_at, deleted_at, created_at, updated_at
+SELECT id, slug, title, summary, body_html, word_count, published_at, deleted_at, created_at, updated_at
 FROM posts
 WHERE slug = sqlc.arg(slug)
     AND published_at <= CURRENT_TIMESTAMP
@@ -9,7 +9,7 @@ LIMIT 1;
 
 -- name: ListPosts :many
 -- index: posts_pagination_idx (published_at DESC, id DESC) WHERE published_at IS NOT NULL AND deleted_at IS NULL.
-SELECT id, slug, title, summary, published_at
+SELECT id, slug, title, summary, published_at, word_count
 FROM posts
 WHERE published_at <= CURRENT_TIMESTAMP
   AND deleted_at IS NULL
@@ -24,7 +24,7 @@ LIMIT sqlc.arg(page_size);
 -- index: posts_pagination_idx (published_at DESC, id DESC) WHERE published_at IS NOT NULL AND deleted_at IS NULL,
 -- scanned backward: ASC is the reverse of the index order. The caller reverses the rows.
 -- A backward page always has a cursor, so the comparison needs no NULL sentinel.
-SELECT id, slug, title, summary, published_at
+SELECT id, slug, title, summary, published_at, word_count
 FROM posts
 WHERE published_at <= CURRENT_TIMESTAMP
   AND deleted_at IS NULL

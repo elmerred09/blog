@@ -10,6 +10,7 @@ const results: SearchResult[] = [
     title: "Keyset pagination",
     summary: "Why OFFSET gets slow.",
     published_at: "2026-10-02T12:00:00Z",
+    reading_minutes: 7,
     tags: [{ slug: "postgres", name: "Postgres" }],
     snippet: [
       { text: "use ", match: false },
@@ -21,6 +22,7 @@ const results: SearchResult[] = [
     title: "Hello, world",
     summary: "The first post.",
     published_at: "2026-10-01T12:00:00Z",
+    reading_minutes: 1,
     tags: [],
     snippet: [],
   },
@@ -43,12 +45,13 @@ describe("SearchResultList", () => {
     expect(link.getAttribute("href")).toBe("/posts/keyset-pagination");
   });
 
-  it("shows the snippet with its matches, and the date and tags", () => {
+  it("shows the snippet with its matches, and the date, reading time and tags", () => {
     render(<SearchResultList query="keyset" results={results} />);
 
     const first = screen.getAllByRole("article")[0];
     expect(first.querySelector("mark")?.textContent).toBe("keyset");
     expect(within(first).getByText("Oct 2, 2026")).toBeTruthy();
+    expect(within(first).getByText("7 min read")).toBeTruthy();
     expect(within(first).getByText("Postgres")).toBeTruthy();
   });
 

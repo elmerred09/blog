@@ -150,7 +150,7 @@ func TestContractRejectsDrift(t *testing.T) {
 	t.Parallel()
 	c := mustContract(t)
 
-	const validItem = `{"slug":"a","title":"A","summary":"s","published_at":"2026-10-01T12:00:00Z","tags":[]}`
+	const validItem = `{"slug":"a","title":"A","summary":"s","published_at":"2026-10-01T12:00:00Z","reading_minutes":1,"tags":[]}`
 
 	tests := []struct {
 		name   string
@@ -163,8 +163,10 @@ func TestContractRejectsDrift(t *testing.T) {
 		{"undocumented field", "/api/v1/posts", 200, `{"items":[],"next_cursor":null,"prev_cursor":null,"total":3}`, false},
 		{"missing next_cursor", "/api/v1/posts", 200, `{"items":[],"prev_cursor":null}`, false},
 		{"missing prev_cursor", "/api/v1/posts", 200, `{"items":[],"next_cursor":null}`, false},
-		{"tags null", "/api/v1/posts", 200, `{"items":[{"slug":"a","title":"A","summary":"s","published_at":"2026-10-01T12:00:00Z","tags":null}],"next_cursor":null,"prev_cursor":null}`, false},
-		{"bad date-time", "/api/v1/posts", 200, `{"items":[{"slug":"a","title":"A","summary":"s","published_at":"yesterday","tags":[]}],"next_cursor":null,"prev_cursor":null}`, false},
+		{"tags null", "/api/v1/posts", 200, `{"items":[{"slug":"a","title":"A","summary":"s","published_at":"2026-10-01T12:00:00Z","reading_minutes":1,"tags":null}],"next_cursor":null,"prev_cursor":null}`, false},
+		{"bad date-time", "/api/v1/posts", 200, `{"items":[{"slug":"a","title":"A","summary":"s","published_at":"yesterday","reading_minutes":1,"tags":[]}],"next_cursor":null,"prev_cursor":null}`, false},
+		{"missing reading_minutes", "/api/v1/posts", 200, `{"items":[{"slug":"a","title":"A","summary":"s","published_at":"2026-10-01T12:00:00Z","tags":[]}],"next_cursor":null,"prev_cursor":null}`, false},
+		{"zero reading_minutes", "/api/v1/posts", 200, `{"items":[{"slug":"a","title":"A","summary":"s","published_at":"2026-10-01T12:00:00Z","reading_minutes":0,"tags":[]}],"next_cursor":null,"prev_cursor":null}`, false},
 		{"valid admin page", "/api/v1/admin/posts", 200, `{"items":[{"id":"01a10933-7891-7d22-8e01-7c250fa9aebf","slug":"a","title":"A","published_at":null,"updated_at":"2026-10-01T12:00:00Z","state":"draft"}],"next_cursor":null,"prev_cursor":"abc"}`, true},
 		{"admin page missing prev_cursor", "/api/v1/admin/posts", 200, `{"items":[],"next_cursor":null}`, false},
 		{"undocumented status", "/api/v1/posts", http.StatusTeapot, `{"error":{"code":"internal","message":"x"}}`, false},

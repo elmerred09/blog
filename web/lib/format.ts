@@ -15,6 +15,10 @@ export function formatDate(iso: string): string {
   return dateFormat.format(new Date(iso));
 }
 
+export function formatReadingTime(minutes: number): string {
+  return `${minutes} min read`;
+}
+
 export function formatDateTime(iso: string): string {
   return `${dateTimeFormat.format(new Date(iso))} UTC`;
 }

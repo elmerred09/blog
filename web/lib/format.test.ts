@@ -1,6 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { formatDate, formatDateTime } from "@/lib/format";
+import { formatDate, formatDateTime, formatReadingTime } from "@/lib/format";
+
+describe("formatReadingTime", () => {
+  it.each([
+    { minutes: 1, want: "1 min read" },
+    { minutes: 10, want: "10 min read" },
+  ])("formats $minutes as $want", ({ minutes, want }) => {
+    expect(formatReadingTime(minutes)).toBe(want);
+  });
+});
 
 describe("formatDateTime", () => {
   it("formats in UTC and says so", () => {

@@ -3,6 +3,7 @@ package post_test
 import (
 	"errors"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -121,7 +122,8 @@ func TestListItemFields(t *testing.T) {
 
 	tagged := dbtest.InsertPost(t, pool,
 		dbtest.WithSlug("tagged"), dbtest.WithTitle("Tagged"),
-		dbtest.PublishedAgo(time.Hour), dbtest.WithTags("search", "go"))
+		dbtest.PublishedAgo(time.Hour), dbtest.WithTags("search", "go"),
+		dbtest.WithBody(strings.Repeat("word ", 231)))
 	dbtest.InsertPost(t, pool, dbtest.WithSlug("untagged"), dbtest.PublishedAgo(2*time.Hour))
 
 	page, err := svc.List(t.Context(), post.ListParams{Limit: 10})
@@ -142,6 +144,12 @@ func TestListItemFields(t *testing.T) {
 	}
 	if tags := page.Items[1].Tags; tags == nil || len(tags) != 0 {
 		t.Errorf("untagged post tags = %#v, want a non-nil empty slice", tags)
+	}
+	if got := first.ReadingMinutes; got != 2 {
+		t.Errorf("reading minutes for 231 words = %d, want 2", got)
+	}
+	if got := page.Items[1].ReadingMinutes; got != 1 {
+		t.Errorf("reading minutes for the default two-word body = %d, want 1", got)
 	}
 }
 
@@ -175,7 +183,8 @@ func TestGet(t *testing.T) {
 	svc := post.NewService(pool)
 
 	tagged := dbtest.InsertPost(t, pool,
-		dbtest.WithSlug("tagged"), dbtest.WithTitle("Tagged"), dbtest.WithTags("postgres", "go"))
+		dbtest.WithSlug("tagged"), dbtest.WithTitle("Tagged"), dbtest.WithTags("postgres", "go"),
+		dbtest.WithBody(strings.Repeat("word\n", 461)))
 	dbtest.InsertPost(t, pool, dbtest.WithSlug("untagged"))
 	dbtest.InsertPost(t, pool, dbtest.WithSlug("draft"), dbtest.Draft())
 	dbtest.InsertPost(t, pool, dbtest.WithSlug("scheduled"), dbtest.ScheduledIn(time.Hour))
@@ -192,6 +201,9 @@ func TestGet(t *testing.T) {
 		}
 		if want := []post.Tag{{Slug: "go", Name: "go"}, {Slug: "postgres", Name: "postgres"}}; !slices.Equal(got.Tags, want) {
 			t.Errorf("tags = %v, want %v", got.Tags, want)
+		}
+		if got.ReadingMinutes != 3 {
+			t.Errorf("reading minutes for 461 words = %d, want 3", got.ReadingMinutes)
 		}
 	})
 

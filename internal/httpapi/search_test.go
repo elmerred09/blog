@@ -31,7 +31,7 @@ func TestSearchShape(t *testing.T) {
 	if len(raw["items"]) != 2 {
 		t.Fatalf("items = %v, want 2", raw["items"])
 	}
-	want := []string{"published_at", "slug", "snippet", "summary", "tags", "title"}
+	want := []string{"published_at", "reading_minutes", "slug", "snippet", "summary", "tags", "title"}
 	if got := keys(raw["items"][0]); !slices.Equal(got, want) {
 		t.Errorf("keys = %v, want %v", got, want)
 	}

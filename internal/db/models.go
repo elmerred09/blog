@@ -22,6 +22,7 @@ type Post struct {
 	DeletedAt    *time.Time
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
+	WordCount    int32
 }
 
 type PostTag struct {

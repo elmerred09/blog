@@ -54,7 +54,7 @@ func TestListPostsShape(t *testing.T) {
 		t.Fatalf("items = %v, want 2", raw["items"])
 	}
 	first, _ := items[0].(map[string]any)
-	if got, want := keys(first), []string{"published_at", "slug", "summary", "tags", "title"}; !slices.Equal(got, want) {
+	if got, want := keys(first), []string{"published_at", "reading_minutes", "slug", "summary", "tags", "title"}; !slices.Equal(got, want) {
 		t.Errorf("item keys = %v, want %v", got, want)
 	}
 	if untagged, _ := items[1].(map[string]any); untagged["tags"] == nil {
@@ -211,13 +211,14 @@ func TestGetPost(t *testing.T) {
 		}
 
 		raw := decode[map[string]any](t, rec)
-		want := []string{"body_html", "published_at", "slug", "summary", "tags", "title", "updated_at"}
+		want := []string{"body_html", "published_at", "reading_minutes", "slug", "summary", "tags", "title", "updated_at"}
 		if got := keys(raw); !slices.Equal(got, want) {
 			t.Errorf("keys = %v, want %v", got, want)
 		}
 
 		got := decode[postJSON](t, rec)
-		if got.Slug != "tagged" || got.Title != "Tagged" || got.BodyHTML != "<h1>Tagged</h1>" || got.UpdatedAt.IsZero() {
+		if got.Slug != "tagged" || got.Title != "Tagged" || got.BodyHTML != "<h1>Tagged</h1>" || got.UpdatedAt.IsZero() ||
+			got.ReadingMinutes != 1 {
 			t.Errorf("post = %+v", got)
 		}
 		if want := []tagJSON{{Slug: "go", Name: "go"}, {Slug: "postgres", Name: "postgres"}}; !slices.Equal(got.Tags, want) {

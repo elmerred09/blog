@@ -90,7 +90,7 @@ func (q *Queries) GetPostByID(ctx context.Context, id uuid.UUID) (GetPostByIDRow
 }
 
 const getPostBySlug = `-- name: GetPostBySlug :one
-SELECT id, slug, title, summary, body_html, published_at, deleted_at, created_at, updated_at
+SELECT id, slug, title, summary, body_html, word_count, published_at, deleted_at, created_at, updated_at
 FROM posts
 WHERE slug = $1
     AND published_at <= CURRENT_TIMESTAMP
@@ -104,6 +104,7 @@ type GetPostBySlugRow struct {
 	Title       string
 	Summary     string
 	BodyHtml    string
+	WordCount   int32
 	PublishedAt *time.Time
 	DeletedAt   *time.Time
 	CreatedAt   time.Time
@@ -120,6 +121,7 @@ func (q *Queries) GetPostBySlug(ctx context.Context, slug string) (GetPostBySlug
 		&i.Title,
 		&i.Summary,
 		&i.BodyHtml,
+		&i.WordCount,
 		&i.PublishedAt,
 		&i.DeletedAt,
 		&i.CreatedAt,
@@ -227,7 +229,7 @@ func (q *Queries) ListAdminPostsBefore(ctx context.Context, arg ListAdminPostsBe
 }
 
 const listPosts = `-- name: ListPosts :many
-SELECT id, slug, title, summary, published_at
+SELECT id, slug, title, summary, published_at, word_count
 FROM posts
 WHERE published_at <= CURRENT_TIMESTAMP
   AND deleted_at IS NULL
@@ -251,6 +253,7 @@ type ListPostsRow struct {
 	Title       string
 	Summary     string
 	PublishedAt *time.Time
+	WordCount   int32
 }
 
 // index: posts_pagination_idx (published_at DESC, id DESC) WHERE published_at IS NOT NULL AND deleted_at IS NULL.
@@ -269,6 +272,7 @@ func (q *Queries) ListPosts(ctx context.Context, arg ListPostsParams) ([]ListPos
 			&i.Title,
 			&i.Summary,
 			&i.PublishedAt,
+			&i.WordCount,
 		); err != nil {
 			return nil, err
 		}
@@ -281,7 +285,7 @@ func (q *Queries) ListPosts(ctx context.Context, arg ListPostsParams) ([]ListPos
 }
 
 const listPostsBefore = `-- name: ListPostsBefore :many
-SELECT id, slug, title, summary, published_at
+SELECT id, slug, title, summary, published_at, word_count
 FROM posts
 WHERE published_at <= CURRENT_TIMESTAMP
   AND deleted_at IS NULL
@@ -305,6 +309,7 @@ type ListPostsBeforeRow struct {
 	Title       string
 	Summary     string
 	PublishedAt *time.Time
+	WordCount   int32
 }
 
 // index: posts_pagination_idx (published_at DESC, id DESC) WHERE published_at IS NOT NULL AND deleted_at IS NULL,
@@ -325,6 +330,7 @@ func (q *Queries) ListPostsBefore(ctx context.Context, arg ListPostsBeforeParams
 			&i.Title,
 			&i.Summary,
 			&i.PublishedAt,
+			&i.WordCount,
 		); err != nil {
 			return nil, err
 		}
