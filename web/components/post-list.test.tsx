@@ -44,12 +44,13 @@ describe("PostList", () => {
     expect(link.getAttribute("href")).toBe("/posts/keyset-pagination");
   });
 
-  it("shows the summary, date and tags", () => {
+  it("shows the summary, date, reading time and tags", () => {
     render(<PostList posts={posts} />);
 
     const first = screen.getAllByRole("article")[0];
     expect(within(first).getByText("Why OFFSET gets slow.")).toBeTruthy();
     expect(within(first).getByText("Oct 2, 2026")).toBeTruthy();
+    expect(within(first).getByText("7 min read")).toBeTruthy();
     expect(within(first).getByText("Postgres")).toBeTruthy();
   });
 

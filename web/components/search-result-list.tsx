@@ -19,6 +19,7 @@ export function SearchResultList({ query, results }: Props) {
             slug={result.slug}
             title={result.title}
             publishedAt={result.published_at}
+            readingMinutes={result.reading_minutes}
             tags={result.tags}
           >
             {result.snippet.length > 0 ? (

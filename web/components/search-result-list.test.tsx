@@ -45,12 +45,13 @@ describe("SearchResultList", () => {
     expect(link.getAttribute("href")).toBe("/posts/keyset-pagination");
   });
 
-  it("shows the snippet with its matches, and the date and tags", () => {
+  it("shows the snippet with its matches, and the date, reading time and tags", () => {
     render(<SearchResultList query="keyset" results={results} />);
 
     const first = screen.getAllByRole("article")[0];
     expect(first.querySelector("mark")?.textContent).toBe("keyset");
     expect(within(first).getByText("Oct 2, 2026")).toBeTruthy();
+    expect(within(first).getByText("7 min read")).toBeTruthy();
     expect(within(first).getByText("Postgres")).toBeTruthy();
   });
 

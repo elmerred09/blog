@@ -17,6 +17,7 @@ export function PostList({ posts }: Props) {
             slug={post.slug}
             title={post.title}
             publishedAt={post.published_at}
+            readingMinutes={post.reading_minutes}
             tags={post.tags}
           >
             <p className="text-sm leading-relaxed text-muted">{post.summary}</p>

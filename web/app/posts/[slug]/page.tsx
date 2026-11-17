@@ -3,10 +3,10 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { PostBody } from "@/components/post-body";
+import { PostDateline } from "@/components/post-dateline";
 import { PostSkeleton } from "@/components/skeleton";
 import { TagList } from "@/components/tag-list";
 import { getPost } from "@/lib/api";
-import { formatDate } from "@/lib/format";
 import { siteName } from "@/lib/site";
 
 type Props = PageProps<"/posts/[slug]">;
@@ -53,12 +53,11 @@ async function PostArticle({ params }: { params: Props["params"] }) {
   return (
     <article>
       <header className="mb-12 space-y-4">
-        <time
-          dateTime={post.published_at}
-          className="block text-xs text-subtle"
-        >
-          {formatDate(post.published_at)}
-        </time>
+        <PostDateline
+          publishedAt={post.published_at}
+          readingMinutes={post.reading_minutes}
+          className="text-sm"
+        />
         <h1 className="text-5xl leading-[1.1] font-semibold tracking-tight">
           {post.title}
         </h1>

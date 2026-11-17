@@ -1,14 +1,15 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { PostDateline } from "@/components/post-dateline";
 import { TagList } from "@/components/tag-list";
 import type { Tag } from "@/lib/api";
-import { formatDate } from "@/lib/format";
 
 type Props = {
   slug: string;
   title: string;
   publishedAt: string;
+  readingMinutes: number;
   tags: Tag[];
   // The text under the title: the summary, or a search snippet.
   children: ReactNode;
@@ -16,13 +17,22 @@ type Props = {
 
 // The post card shared by the home list and the search results. The title link
 // stretches over the whole card; the tags sit above it (see TagList).
-export function PostCard({ slug, title, publishedAt, tags, children }: Props) {
+export function PostCard({
+  slug,
+  title,
+  publishedAt,
+  readingMinutes,
+  tags,
+  children,
+}: Props) {
   return (
     <article className="group relative overflow-hidden rounded-2xl border border-line bg-card transition-colors hover:border-line-strong">
       <div className="border-b border-line px-6 py-4">
-        <time dateTime={publishedAt} className="text-xs text-subtle">
-          {formatDate(publishedAt)}
-        </time>
+        <PostDateline
+          publishedAt={publishedAt}
+          readingMinutes={readingMinutes}
+          className="text-xs"
+        />
         <h2 className="mt-1 text-xl leading-snug font-semibold tracking-tight">
           <Link
             href={`/posts/${slug}`}

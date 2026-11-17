@@ -112,6 +112,9 @@ test("a post page shows its metadata and highlighted code", async ({
   await expect(page).toHaveTitle(`${CODE_POST.title} | Bits by Elmer`);
   await expect(page.locator("article time")).toHaveText("Jan 14, 2020");
   await expect(
+    page.locator("article header").getByText("1 min read"),
+  ).toBeVisible();
+  await expect(
     page.getByRole("list", { name: "Tags" }).getByRole("listitem"),
   ).toHaveText([FIXTURE_TAG, "Go"]);
 
