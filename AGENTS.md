@@ -64,7 +64,7 @@ Before finishing a change, `make lint` and `make test` should pass. For changes 
 
 ## Conventions
 
-Scoped rules live in `.cursor/rules/` (`go.mdc`, `sql.mdc`, `web.mdc`). Key points:
+Scoped rules live in `.cursor/rules/` (`go.mdc`, `sql.mdc`, `web.mdc`). Bugbot doesn't read them; its review checklist is `.cursor/BUGBOT.md`, so when you add or change a rule there, update that file too. Key points:
 
 - Wrap errors with `%w`, pass `context.Context` first, no global state, table-driven tests.
 - Migrations are append-only. Every query needs an index justification. Use keyset pagination on `(published_at, id)`, never `OFFSET`.
