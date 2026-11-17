@@ -469,10 +469,15 @@ components:
         name:
           type: string
 
+    ReadingMinutes:
+      description: Estimated minutes to read the body, rounded up from its word count.
+      type: integer
+      minimum: 1
+
     PostListItem:
       type: object
       additionalProperties: false
-      required: [slug, title, summary, published_at, tags]
+      required: [slug, title, summary, published_at, reading_minutes, tags]
       properties:
         slug:
           type: string
@@ -483,6 +488,8 @@ components:
         published_at:
           type: string
           format: date-time
+        reading_minutes:
+          $ref: "#/components/schemas/ReadingMinutes"
         tags:
           description: Sorted by slug. Empty, never null, for an untagged post.
           type: array
@@ -492,7 +499,7 @@ components:
     Post:
       type: object
       additionalProperties: false
-      required: [slug, title, summary, published_at, tags, body_html, updated_at]
+      required: [slug, title, summary, published_at, reading_minutes, tags, body_html, updated_at]
       properties:
         slug:
           type: string
@@ -503,6 +510,8 @@ components:
         published_at:
           type: string
           format: date-time
+        reading_minutes:
+          $ref: "#/components/schemas/ReadingMinutes"
         tags:
           description: Sorted by slug. Empty, never null, for an untagged post.
           type: array
@@ -571,7 +580,7 @@ components:
       description: A PostListItem plus a snippet. The fields are repeated rather than built with allOf, because in OpenAPI 3.0 additionalProperties false applies to each allOf branch separately.
       type: object
       additionalProperties: false
-      required: [slug, title, summary, published_at, tags, snippet]
+      required: [slug, title, summary, published_at, reading_minutes, tags, snippet]
       properties:
         slug:
           type: string
@@ -582,6 +591,8 @@ components:
         published_at:
           type: string
           format: date-time
+        reading_minutes:
+          $ref: "#/components/schemas/ReadingMinutes"
         tags:
           description: Sorted by slug. Empty, never null, for an untagged post.
           type: array

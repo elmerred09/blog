@@ -17,6 +17,8 @@ type ListItem struct {
 	Title       string
 	Summary     string
 	PublishedAt time.Time
+	// ReadingMinutes is at least 1.
+	ReadingMinutes int
 	// Tags are sorted by slug, and never nil.
 	Tags []Tag
 }

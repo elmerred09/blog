@@ -17,6 +17,7 @@ const results: SearchResults = {
       title: "Keyset pagination",
       summary: "Why OFFSET gets slow.",
       published_at: "2026-10-01T12:00:00Z",
+      reading_minutes: 4,
       tags: [{ slug: "postgres", name: "Postgres" }],
       snippet: [
         { text: "use ", match: false },

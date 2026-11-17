@@ -222,12 +222,15 @@ export interface components {
             slug: string;
             name: string;
         };
+        /** @description Estimated minutes to read the body, rounded up from its word count. */
+        ReadingMinutes: number;
         PostListItem: {
             slug: string;
             title: string;
             summary: string;
             /** Format: date-time */
             published_at: string;
+            reading_minutes: components["schemas"]["ReadingMinutes"];
             /** @description Sorted by slug. Empty, never null, for an untagged post. */
             tags: components["schemas"]["Tag"][];
         };
@@ -237,6 +240,7 @@ export interface components {
             summary: string;
             /** Format: date-time */
             published_at: string;
+            reading_minutes: components["schemas"]["ReadingMinutes"];
             /** @description Sorted by slug. Empty, never null, for an untagged post. */
             tags: components["schemas"]["Tag"][];
             /** @description Rendered from the markdown when the post is saved; raw HTML in the markdown source is escaped. */
@@ -275,6 +279,7 @@ export interface components {
             summary: string;
             /** Format: date-time */
             published_at: string;
+            reading_minutes: components["schemas"]["ReadingMinutes"];
             /** @description Sorted by slug. Empty, never null, for an untagged post. */
             tags: components["schemas"]["Tag"][];
             /** @description An excerpt of the body around the matches, in order. Empty when there's nothing to excerpt. */

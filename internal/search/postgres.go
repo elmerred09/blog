@@ -31,7 +31,10 @@ func (p *Postgres) Search(ctx context.Context, q Query) ([]Result, error) {
 
 	itemRows := make([]post.Row, len(rows))
 	for i, r := range rows {
-		itemRows[i] = post.Row{ID: r.ID, Slug: r.Slug, Title: r.Title, Summary: r.Summary, PublishedAt: r.PublishedAt}
+		itemRows[i] = post.Row{
+			ID: r.ID, Slug: r.Slug, Title: r.Title, Summary: r.Summary,
+			PublishedAt: r.PublishedAt, WordCount: r.WordCount,
+		}
 	}
 	items, err := post.ListItems(ctx, p.q, itemRows)
 	if err != nil {

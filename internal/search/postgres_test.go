@@ -248,7 +248,8 @@ func TestSearchResultFields(t *testing.T) {
 	s, pool := newSearcher(t)
 	p := dbtest.InsertPost(t, pool, dbtest.WithSlug("tagged"), dbtest.WithTitle("Badgers"),
 		dbtest.WithSummary("All about badgers."), dbtest.WithBody("Badgers dig."), dbtest.WithTags("zoo", "animals"))
-	dbtest.InsertPost(t, pool, dbtest.WithSlug("untagged"), dbtest.WithTitle("More badgers"), dbtest.WithBody("Badgers sleep."))
+	dbtest.InsertPost(t, pool, dbtest.WithSlug("untagged"), dbtest.WithTitle("More badgers"),
+		dbtest.WithBody("Badgers sleep. "+strings.Repeat("Long ", 300)))
 
 	results := run(t, s, "badgers", search.DefaultLimit)
 	byslug := map[string]search.Result{}
@@ -265,6 +266,12 @@ func TestSearchResultFields(t *testing.T) {
 	}
 	if tags := byslug["untagged"].Tags; tags == nil || len(tags) != 0 {
 		t.Errorf("untagged tags = %#v, want empty and non-nil", tags)
+	}
+	if got.ReadingMinutes != 1 {
+		t.Errorf("tagged reading minutes = %d, want 1", got.ReadingMinutes)
+	}
+	if got := byslug["untagged"].ReadingMinutes; got != 2 {
+		t.Errorf("untagged reading minutes for 302 words = %d, want 2", got)
 	}
 }
 

@@ -136,6 +136,7 @@ type Row struct {
 	Title       string
 	Summary     string
 	PublishedAt *time.Time
+	WordCount   int32
 }
 
 // ListItems turns rows into ListItems in the same order, with each post's tags
@@ -160,11 +161,12 @@ func ListItems(ctx context.Context, q *db.Queries, rows []Row) ([]ListItem, erro
 			tags = []Tag{}
 		}
 		items[i] = ListItem{
-			Slug:        r.Slug,
-			Title:       r.Title,
-			Summary:     r.Summary,
-			PublishedAt: *r.PublishedAt,
-			Tags:        tags,
+			Slug:           r.Slug,
+			Title:          r.Title,
+			Summary:        r.Summary,
+			PublishedAt:    *r.PublishedAt,
+			ReadingMinutes: ReadingMinutes(r.WordCount),
+			Tags:           tags,
 		}
 	}
 	return items, nil
@@ -233,12 +235,15 @@ func (s *Service) Get(ctx context.Context, slug string) (Post, error) {
 	}
 
 	return Post{
-		Slug:        row.Slug,
-		Title:       row.Title,
-		Summary:     row.Summary,
-		PublishedAt: *row.PublishedAt,
-		Tags:        tags,
-		BodyHTML:    row.BodyHtml,
-		UpdatedAt:   row.UpdatedAt,
+		ListItem: ListItem{
+			Slug:           row.Slug,
+			Title:          row.Title,
+			Summary:        row.Summary,
+			PublishedAt:    *row.PublishedAt,
+			ReadingMinutes: ReadingMinutes(row.WordCount),
+			Tags:           tags,
+		},
+		BodyHTML:  row.BodyHtml,
+		UpdatedAt: row.UpdatedAt,
 	}, nil
 }
