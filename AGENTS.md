@@ -73,18 +73,21 @@ Scoped rules live in `.cursor/rules/` (`go.mdc`, `sql.mdc`, `web.mdc`). Key poin
 
 ## Commits
 
-Commit your own work before you finish a task, once the checks above pass. Don't leave it uncommitted for the user to sort out.
+Changes reach `main` through pull requests. Commit your own work before you finish a task, once the checks above pass, then open a pull request. Don't leave work uncommitted for the user to sort out.
 
+- Start a task on a new branch off an up-to-date `main` (`git switch main && git pull --ff-only && git switch -c <type>/<topic>`, for example `feat/reading-time` or `fix/sitemap-dates`). If the user's uncommitted changes are in the way, ask rather than stash or discard them. Continue on the current branch when the task is follow-up work on it.
 - Split a change into commits that each make sense alone and each pass the checks alone, for example the migration, then the API and its contract, then the UI. The git hooks check the working tree, not the staged snapshot, so a commit can pass them and still be broken by itself. When a split is not obviously safe, check out each commit in a scratch `git worktree` and build and test it there.
 - Stage files by path. Never `git add -A` or `git add .`: the tree may hold the user's unrelated, unfinished changes. Leave those unstaged and mention them.
 - Write the subject in the imperative, under about 72 characters, saying what changed. Use the body for why, and for anything a reviewer couldn't see from the diff: trade-offs, measurements, follow-ups.
 - Never skip hooks with `--no-verify`. If a hook fails, fix the cause.
-- Don't push, open a pull request, or rewrite pushed history unless the user asks. A push to `main` deploys to production.
+- When the task is done, push the branch (`git push -u origin HEAD`; the pre-push hook runs the tests) and open a pull request with `gh pr create`. The title says what changed; the body says why, lists anything the reviewer should look at closely, and says how you verified it (the `make` targets you ran, E2E included or not). CI runs on it, and Bugbot reviews it once it's enabled for the repository. Later fixes go on the same branch as new commits.
+- Never push to `main`, merge a pull request, or force-push unless the user asks. A push to `main` deploys to production, and so does merging into it.
 
 ## Automation you should know about
 
 - After you edit a Go file, a hook runs `gofmt` on it. After edits under `db/queries` or `db/migrations`, it runs `make sqlc`. After you edit a file under `web/`, it runs Prettier on it. After you edit `api/openapi.yaml`, it runs `make web-types`.
 - When you stop, a hook runs `make lint` and asks you to continue if it reports issues. It doesn't run the web checks.
+- `.cursor/permissions.json` steers Cursor's Auto-review run mode: local git, pushing a feature branch, and `gh pr create` can run without approval; pushes to `main`, force pushes, `--no-verify`, merges, and commands that discard uncommitted work should be sent for approval. It is guidance for a classifier, not a hard block, so follow the Commits rules regardless.
 - Git hooks (lefthook) run lint (which includes the gofmt check), `sqlc diff` and `make chroma-css-check` on commit, and tests on push. For `web/` and `api/openapi.yaml`, they run the web lint, typecheck, Prettier check and API types check on commit (each only when matching files are staged), and `make web-test` on push.
 
 - CI (`.github/workflows/ci.yml`, GitHub Actions) runs on pull requests and pushes to `main`, calling the same `make` targets. The `go` job runs `fmt-check`, `lint` (golangci-lint v2.14.0, built from source with the repo's Go), `sqlc-check`, `chroma-css-check`, `deps-check` and `test` (Docker for the testcontainers tests). The `web` job runs `web-install`, `web-check` and `web-build`. The `e2e` job starts the compose Postgres and RustFS, caches Playwright's browsers by version, runs `make e2e-install` and `make e2e`, and uploads the report and traces when it fails. Unlike the stop hook, CI runs the web checks. It doesn't use nvm, so don't call `make node-check` there. Keep the golangci-lint version in the workflow in step with the one you use locally.
