@@ -71,6 +71,16 @@ Scoped rules live in `.cursor/rules/` (`go.mdc`, `sql.mdc`, `web.mdc`). Key poin
 - Next.js: server components by default, typed API client.
 - Schema changes go through a new migration, then `make sqlc`.
 
+## Commits
+
+Commit your own work before you finish a task, once the checks above pass. Don't leave it uncommitted for the user to sort out.
+
+- Split a change into commits that each make sense alone and each pass the checks alone, for example the migration, then the API and its contract, then the UI. The git hooks check the working tree, not the staged snapshot, so a commit can pass them and still be broken by itself. When a split is not obviously safe, check out each commit in a scratch `git worktree` and build and test it there.
+- Stage files by path. Never `git add -A` or `git add .`: the tree may hold the user's unrelated, unfinished changes. Leave those unstaged and mention them.
+- Write the subject in the imperative, under about 72 characters, saying what changed. Use the body for why, and for anything a reviewer couldn't see from the diff: trade-offs, measurements, follow-ups.
+- Never skip hooks with `--no-verify`. If a hook fails, fix the cause.
+- Don't push, open a pull request, or rewrite pushed history unless the user asks. A push to `main` deploys to production.
+
 ## Automation you should know about
 
 - After you edit a Go file, a hook runs `gofmt` on it. After edits under `db/queries` or `db/migrations`, it runs `make sqlc`. After you edit a file under `web/`, it runs Prettier on it. After you edit `api/openapi.yaml`, it runs `make web-types`.
