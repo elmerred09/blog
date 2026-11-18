@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Inter } from "next/font/google";
 import Link from "next/link";
+import { Suspense } from "react";
 
+import { HeaderSearch, HeaderSearchFromUrl } from "@/components/header-search";
 import { LogoMark } from "@/components/logo";
-import { Menu } from "@/components/menu";
 import { siteName, siteUrl } from "@/lib/site";
 
 import "./globals.css";
@@ -48,9 +49,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <LogoMark className="size-8 shrink-0" />
             {siteName}
           </Link>
-          <nav>
-            <Menu />
-          </nav>
+          <Suspense fallback={<HeaderSearch defaultQuery="" />}>
+            <HeaderSearchFromUrl />
+          </Suspense>
         </header>
         <main className="mx-auto w-full max-w-[calc(960px+3rem)] flex-1 px-6 pt-24 pb-12">
           {children}
