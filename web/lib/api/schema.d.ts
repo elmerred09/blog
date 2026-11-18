@@ -72,6 +72,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/posts/{slug}/adjacent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The published posts just newer and just older than a published post, in list order. Drafts, scheduled, and deleted posts are 404. */
+        get: operations["getAdjacentPosts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sitemap": {
         parameters: {
             query?: never;
@@ -243,10 +260,23 @@ export interface components {
             reading_minutes: components["schemas"]["ReadingMinutes"];
             /** @description Sorted by slug. Empty, never null, for an untagged post. */
             tags: components["schemas"]["Tag"][];
-            /** @description Rendered from the markdown when the post is saved; raw HTML in the markdown source is escaped. */
+            /** @description Rendered from the markdown when the post is saved, and again on deploy when the renderer's output changes; raw HTML in the markdown source is escaped. */
             body_html: string;
             /** Format: date-time */
             updated_at: string;
+        };
+        /** @description The two sides repeat the same object rather than sharing a $ref, because in OpenAPI 3.0 a $ref can't be made nullable. */
+        AdjacentPosts: {
+            /** @description The post published just after this one, or null for the newest. */
+            newer: {
+                slug: string;
+                title: string;
+            } | null;
+            /** @description The post published just before this one, or null for the oldest. */
+            older: {
+                slug: string;
+                title: string;
+            } | null;
         };
         SitemapEntry: {
             slug: string;
@@ -576,6 +606,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Post"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Timeout"];
+        };
+    };
+    getAdjacentPosts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The neighbors. A side is null when the post is the newest or the oldest. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdjacentPosts"];
                 };
             };
             404: components["responses"]["NotFound"];

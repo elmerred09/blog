@@ -212,6 +212,29 @@ func (s *Service) SitemapEntries(ctx context.Context) ([]SitemapEntry, error) {
 	return entries, nil
 }
 
+// Adjacent returns the published posts just newer and just older than the
+// published post with this slug, or ErrNotFound.
+func (s *Service) Adjacent(ctx context.Context, slug string) (Adjacent, error) {
+	row, err := s.q.GetAdjacentPosts(ctx, slug)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Adjacent{}, ErrNotFound
+	}
+	if err != nil {
+		return Adjacent{}, fmt.Errorf("get posts adjacent to %q: %w", slug, err)
+	}
+	return Adjacent{
+		Newer: neighbor(row.NewerSlug, row.NewerTitle),
+		Older: neighbor(row.OlderSlug, row.OlderTitle),
+	}, nil
+}
+
+func neighbor(slug, title *string) *Neighbor {
+	if slug == nil || title == nil {
+		return nil
+	}
+	return &Neighbor{Slug: *slug, Title: *title}
+}
+
 // Get returns the published post with this slug, or ErrNotFound.
 func (s *Service) Get(ctx context.Context, slug string) (Post, error) {
 	row, err := s.q.GetPostBySlug(ctx, slug)

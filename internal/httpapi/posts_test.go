@@ -240,6 +240,44 @@ func TestGetPost(t *testing.T) {
 	}
 }
 
+func TestGetAdjacentPosts(t *testing.T) {
+	t.Parallel()
+	h, pool := postsAPI(t)
+
+	dbtest.InsertPost(t, pool, dbtest.WithSlug("older"), dbtest.WithTitle("Older"), dbtest.PublishedAgo(3*time.Hour))
+	dbtest.InsertPost(t, pool, dbtest.WithSlug("current"), dbtest.PublishedAgo(2*time.Hour))
+	dbtest.InsertPost(t, pool, dbtest.WithSlug("newer"), dbtest.WithTitle("Newer"), dbtest.PublishedAgo(time.Hour))
+	dbtest.InsertPost(t, pool, dbtest.WithSlug("draft"), dbtest.Draft())
+
+	t.Run("both sides", func(t *testing.T) {
+		rec := get(t, h, "/api/v1/posts/current/adjacent")
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200; body %s", rec.Code, rec.Body)
+		}
+		got := decode[adjacentJSON](t, rec)
+		if got.Newer == nil || *got.Newer != (neighborJSON{Slug: "newer", Title: "Newer"}) ||
+			got.Older == nil || *got.Older != (neighborJSON{Slug: "older", Title: "Older"}) {
+			t.Errorf("adjacent = newer %+v, older %+v", got.Newer, got.Older)
+		}
+	})
+
+	t.Run("a missing side is null", func(t *testing.T) {
+		raw := decode[map[string]any](t, get(t, h, "/api/v1/posts/newer/adjacent"))
+		if got, want := keys(raw), []string{"newer", "older"}; !slices.Equal(got, want) {
+			t.Errorf("keys = %v, want %v", got, want)
+		}
+		if raw["newer"] != nil {
+			t.Errorf("newer = %v, want null for the newest post", raw["newer"])
+		}
+	})
+
+	for _, slug := range []string{"draft", "missing"} {
+		t.Run(slug+" is 404", func(t *testing.T) {
+			wantError(t, get(t, h, "/api/v1/posts/"+slug+"/adjacent"), http.StatusNotFound, codeNotFound)
+		})
+	}
+}
+
 func TestPostsDatabaseErrorIs500(t *testing.T) {
 	t.Parallel()
 	pool, _ := env.NewDB(t)
@@ -253,6 +291,7 @@ func TestPostsDatabaseErrorIs500(t *testing.T) {
 	}{
 		{"/api/v1/posts", "list posts: closed pool"},
 		{"/api/v1/posts/anything", `get post "anything": closed pool`},
+		{"/api/v1/posts/anything/adjacent", `get posts adjacent to "anything": closed pool`},
 	}
 	for _, tc := range tests {
 		buf.Reset()

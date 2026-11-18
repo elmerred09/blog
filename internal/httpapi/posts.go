@@ -125,6 +125,38 @@ func getSitemap(posts *post.Service) gin.HandlerFunc {
 	}
 }
 
+type neighborJSON struct {
+	Slug  string `json:"slug"`
+	Title string `json:"title"`
+}
+
+type adjacentJSON struct {
+	Newer *neighborJSON `json:"newer"`
+	Older *neighborJSON `json:"older"`
+}
+
+func toNeighborJSON(n *post.Neighbor) *neighborJSON {
+	if n == nil {
+		return nil
+	}
+	return &neighborJSON{Slug: n.Slug, Title: n.Title}
+}
+
+func getAdjacentPosts(posts *post.Service) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		adj, err := posts.Adjacent(c.Request.Context(), c.Param("slug"))
+		if errors.Is(err, post.ErrNotFound) {
+			writeError(c, http.StatusNotFound, codeNotFound, "post not found")
+			return
+		}
+		if err != nil {
+			internalError(c, err)
+			return
+		}
+		c.JSON(http.StatusOK, adjacentJSON{Newer: toNeighborJSON(adj.Newer), Older: toNeighborJSON(adj.Older)})
+	}
+}
+
 func getPost(posts *post.Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		p, err := posts.Get(c.Request.Context(), c.Param("slug"))
