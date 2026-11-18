@@ -66,6 +66,14 @@ export function postImage(
     >
       {post.title}
     </div>,
+    { detail: postDetail(post) },
+  );
+}
+
+function postDetail(
+  post: Pick<Post, "published_at" | "reading_minutes" | "tags">,
+): ReactNode {
+  return (
     <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
       <div style={{ display: "flex", fontSize: 28, color: color.muted }}>
         {`${formatDate(post.published_at)}  ·  ${formatReadingTime(post.reading_minutes)}`}
@@ -88,7 +96,7 @@ export function postImage(
           </div>
         ))}
       </div>
-    </div>,
+    </div>
   );
 }
 
@@ -137,13 +145,50 @@ export function siteImage(): ImageResponse {
         {siteDescription}
       </div>
     </div>,
+    { logo: "top" },
   );
 }
 
-// card is the shared frame: the content centered vertically, a bottom row
-// with the header's logo and name (and any detail on the right), and a
-// brand-colored edge along the bottom.
-function card(main: ReactNode, detail?: ReactNode): ImageResponse {
+type CardOptions = {
+  // detail sits at the right end of the logo row.
+  detail?: ReactNode;
+  logo?: "top" | "bottom";
+};
+
+// card is the shared frame: the content centered vertically, a row with the
+// header's logo and name above or below it, and a brand-colored edge along
+// the bottom.
+function card(
+  main: ReactNode,
+  { detail, logo = "bottom" }: CardOptions = {},
+): ImageResponse {
+  const logoRow = (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+        <svg width={64} height={64} viewBox="0 0 32 32">
+          <rect width="32" height="32" rx={logoRadius} fill={color.brand} />
+          <path d={logoGlyph} fill="#ffffff" />
+        </svg>
+        <div
+          style={{
+            display: "flex",
+            fontSize: 40,
+            fontWeight: 700,
+            letterSpacing: "-0.02em",
+          }}
+        >
+          {siteName}
+        </div>
+      </div>
+      {detail}
+    </div>
+  );
   return new ImageResponse(
     <div
       style={{
@@ -164,34 +209,11 @@ function card(main: ReactNode, detail?: ReactNode): ImageResponse {
           padding: "64px 80px 56px",
         }}
       >
+        {logo === "top" && logoRow}
         <div style={{ flex: 1, display: "flex", alignItems: "center" }}>
           {main}
         </div>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-            <svg width={64} height={64} viewBox="0 0 32 32">
-              <rect width="32" height="32" rx={logoRadius} fill={color.brand} />
-              <path d={logoGlyph} fill="#ffffff" />
-            </svg>
-            <div
-              style={{
-                display: "flex",
-                fontSize: 40,
-                fontWeight: 700,
-                letterSpacing: "-0.02em",
-              }}
-            >
-              {siteName}
-            </div>
-          </div>
-          {detail}
-        </div>
+        {logo === "bottom" && logoRow}
       </div>
       <div style={{ display: "flex", height: 16, background: color.brand }} />
     </div>,
