@@ -6,6 +6,11 @@ const nextConfig: NextConfig = {
   output: "standalone",
   cacheComponents: true,
   partialPrefetching: true,
+  // Inlined at build time for the footer's copyright year: a prerendered
+  // component can't call new Date(), and every deploy is a fresh build.
+  env: {
+    BUILD_YEAR: String(new Date().getFullYear()),
+  },
   experimental: {
     agentUpgrade: "security",
   },

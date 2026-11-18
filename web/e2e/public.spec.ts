@@ -127,6 +127,19 @@ test("a post page shows its metadata and highlighted code", async ({
   expect(await keyword.evaluate(color)).not.toBe(await code.evaluate(color));
 });
 
+test("a post page ends with the footer's copyright and links", async ({
+  page,
+}) => {
+  await page.goto(`/posts/${CODE_POST.slug}`);
+
+  const footer = page.getByRole("contentinfo");
+  await expect(footer).toContainText(
+    `© ${new Date().getFullYear()} Bits by Elmer`,
+  );
+  await expect(footer.getByRole("link", { name: "GitHub" })).toBeVisible();
+  await expect(footer.getByRole("link", { name: "LinkedIn" })).toBeVisible();
+});
+
 test("a title in the posts list opens the post", async ({ page }) => {
   await page.goto("/");
   // Whichever post is newest: an admin spec may have published one.
