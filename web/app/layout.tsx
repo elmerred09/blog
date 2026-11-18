@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist_Mono, Inter } from "next/font/google";
 import Link from "next/link";
 
+import { LogoMark } from "@/components/logo";
 import { Menu } from "@/components/menu";
 import { siteName, siteUrl } from "@/lib/site";
 
@@ -40,7 +41,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="flex min-h-full flex-col font-sans">
         <header className="relative z-20 mx-auto flex w-full max-w-[calc(960px+3rem)] items-center justify-between px-6 pt-8">
-          <Link href="/" className="text-xl font-semibold tracking-tight">
+          <Link
+            href="/"
+            className="flex items-center gap-2.5 text-xl font-bold tracking-tight"
+          >
+            <LogoMark className="size-8 shrink-0" />
             {siteName}
           </Link>
           <nav>

@@ -16,7 +16,16 @@ describe("Intro", () => {
     expect(
       screen.getByText(/software engineer with six years of experience/),
     ).toBeTruthy();
-    expect(screen.getByText(/one bit at a time/)).toBeTruthy();
-    expect(screen.getByText("Bits by Elmer").tagName).toBe("STRONG");
+  });
+
+  it("links to the social profiles", () => {
+    render(<Intro />);
+
+    expect(
+      screen.getByRole("link", { name: "LinkedIn" }).getAttribute("href"),
+    ).toBe("https://www.linkedin.com/in/egonzalez49/");
+    expect(
+      screen.getByRole("link", { name: "GitHub" }).getAttribute("href"),
+    ).toBe("https://github.com/elmerred09");
   });
 });

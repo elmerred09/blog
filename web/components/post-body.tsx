@@ -12,7 +12,7 @@ export function PostBody({ html }: Props) {
     // html comes from our markdown renderer, which escapes raw HTML.
     <div
       className={[
-        "prose max-w-none prose-pre:text-inherit",
+        "prose max-w-[70ch] prose-pre:text-inherit",
         // Colors and sizes follow the devTalk template's post page.
         "[--tw-prose-body:rgba(0,0,0,0.8)] [--tw-prose-bold:#000] [--tw-prose-headings:#000]",
         "[--tw-prose-links:var(--brand)] [--tw-prose-quote-borders:var(--brand)]",

@@ -1,4 +1,4 @@
-export const profiles = [
+const profiles = [
   {
     name: "LinkedIn",
     href: "https://www.linkedin.com/in/egonzalez49/",
@@ -10,6 +10,26 @@ export const profiles = [
     icon: GitHubIcon,
   },
 ];
+
+export function SocialLinks({ className }: { className?: string }) {
+  return (
+    <ul className={`flex gap-2 ${className ?? ""}`}>
+      {profiles.map(({ name, href, icon: Icon }) => (
+        <li key={name}>
+          <a
+            href={href}
+            aria-label={name}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex size-10 items-center justify-center rounded-lg border border-line bg-card text-muted transition-colors hover:border-line-strong hover:text-brand"
+          >
+            <Icon />
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 function LinkedInIcon() {
   return (
