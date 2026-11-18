@@ -4,8 +4,10 @@ import {
   CODE_POST,
   DRAFT_POST,
   FIXTURE_TAG,
+  PAGING_POSTS,
   PUBLISHED_FIXTURES,
   SCHEDULED_POST,
+  SEARCH_POST,
 } from "./fixtures";
 
 // The admin specs publish posts while these run, and those are newer than
@@ -125,6 +127,70 @@ test("a post page shows its metadata and highlighted code", async ({
   await expect(keyword).toBeVisible();
   const color = (el: Element) => getComputedStyle(el).color;
   expect(await keyword.evaluate(color)).not.toBe(await code.evaluate(color));
+});
+
+test("a heading links to itself", async ({ page }) => {
+  await page.goto(`/posts/${CODE_POST.slug}`);
+
+  const heading = page.getByRole("heading", { level: 2, name: "Running it" });
+  await heading.getByRole("link", { name: "Running it" }).click();
+
+  await expect(page).toHaveURL(
+    new RegExp(`/posts/${CODE_POST.slug}#running-it$`),
+  );
+  await expect(heading).toHaveAttribute("id", "running-it");
+});
+
+test("a code block's copy button copies its code", async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto(`/posts/${CODE_POST.slug}`);
+
+  const block = page.locator("pre.chroma");
+  await block.hover();
+  // The button is added after hydration.
+  await page.getByRole("button", { name: "Copy code" }).click();
+
+  await expect(page.getByRole("button", { name: "Copied" })).toBeVisible();
+  const copied = await page.evaluate(() => navigator.clipboard.readText());
+  expect(copied).toBe(CODE_POST.body_md.split("```go\n")[1].split("\n```")[0]);
+});
+
+test("a post links to the posts on either side of it", async ({ page }) => {
+  // Admin specs only publish posts newer than every fixture, so the search
+  // post's neighbors are fixed: the code post above it, a paging post below.
+  await page.goto(`/posts/${SEARCH_POST.slug}`);
+  const nav = page.getByRole("navigation", { name: "More posts" });
+
+  const older = PAGING_POSTS[PAGING_POSTS.length - 1];
+  await expect(
+    nav.getByRole("link", { name: `Older bit: ${older.title}` }),
+  ).toHaveAttribute("href", `/posts/${older.slug}`);
+
+  await nav
+    .getByRole("link", { name: `Newer bit: ${CODE_POST.title}` })
+    .click();
+  await expect(page).toHaveURL(new RegExp(`/posts/${CODE_POST.slug}$`));
+  await expect(
+    page.getByRole("heading", { level: 1, name: CODE_POST.title }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("navigation", { name: "More posts" })
+      .getByRole("link", { name: `Older bit: ${SEARCH_POST.title}` }),
+  ).toBeVisible();
+});
+
+test("the oldest post has no older link", async ({ page }) => {
+  await page.goto(`/posts/${PAGING_POSTS[0].slug}`);
+  const nav = page.getByRole("navigation", { name: "More posts" });
+
+  await expect(
+    nav.getByRole("link", { name: `Newer bit: ${PAGING_POSTS[1].title}` }),
+  ).toBeVisible();
+  await expect(nav.getByRole("link", { name: /^Older bit/ })).toHaveCount(0);
 });
 
 test("a title in the posts list opens the post", async ({ page }) => {

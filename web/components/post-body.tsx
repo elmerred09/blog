@@ -1,6 +1,8 @@
 import "@/app/chroma.css";
 import "@/app/chroma-light.css";
 
+import { RenderedHtml } from "@/components/rendered-html";
+
 type Props = {
   html: string;
 };
@@ -9,8 +11,8 @@ type Props = {
 // preview looks exactly like the published page.
 export function PostBody({ html }: Props) {
   return (
-    // html comes from our markdown renderer, which escapes raw HTML.
-    <div
+    <RenderedHtml
+      html={html}
       className={[
         "prose max-w-[70ch] prose-pre:text-inherit",
         // Colors and sizes follow the devTalk template's post page.
@@ -20,10 +22,10 @@ export function PostBody({ html }: Props) {
         "prose-p:leading-7 prose-li:leading-7",
         "prose-h2:mt-10 prose-h2:mb-4 prose-h2:text-[2rem] prose-h2:leading-tight prose-h2:font-bold",
         "prose-h3:mt-8 prose-h3:mb-4 prose-h3:text-2xl prose-h3:font-bold",
+        "prose-headings:scroll-mt-8",
         "prose-a:font-normal prose-a:no-underline hover:prose-a:underline",
         "prose-blockquote:border-l-8 prose-blockquote:text-xl prose-blockquote:font-normal prose-blockquote:not-italic",
       ].join(" ")}
-      dangerouslySetInnerHTML={{ __html: html }}
     />
   );
 }

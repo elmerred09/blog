@@ -29,6 +29,8 @@ export const CODE_POST: FixturePost = {
   body_md: [
     "The block below should render with chroma classes.",
     "",
+    "## Running it",
+    "",
     "```go",
     "package main",
     "",

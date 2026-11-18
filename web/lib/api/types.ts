@@ -6,6 +6,7 @@ export type Tag = Schemas["Tag"];
 export type PostListItem = Schemas["PostListItem"];
 export type Post = Schemas["Post"];
 export type Page = Schemas["Page"];
+export type AdjacentPosts = Schemas["AdjacentPosts"];
 export type SitemapEntry = Schemas["SitemapEntry"];
 export type SitemapPage = Schemas["SitemapPage"];
 export type SnippetFragment = Schemas["SnippetFragment"];
