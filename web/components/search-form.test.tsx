@@ -1,7 +1,12 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { SearchForm } from "@/components/search-form";
+import { SearchForm, SearchFormFromUrl } from "@/components/search-form";
+
+vi.mock("next/navigation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/navigation")>()),
+  useSearchParams: () => new URLSearchParams("?q=%20keyset%20"),
+}));
 
 describe("SearchForm", () => {
   it("submits q to /search", () => {
@@ -31,5 +36,15 @@ describe("SearchForm", () => {
     render(<SearchForm defaultQuery="" />);
 
     expect(screen.getByRole("searchbox").getAttribute("maxlength")).toBe("200");
+  });
+});
+
+describe("SearchFormFromUrl", () => {
+  it("starts with the URL's trimmed query", () => {
+    render(<SearchFormFromUrl />);
+
+    expect(screen.getByRole<HTMLInputElement>("searchbox").value).toBe(
+      "keyset",
+    );
   });
 });

@@ -6,14 +6,26 @@ import { SEARCH_POST, SEARCH_TERM } from "./fixtures";
 // and in nothing the admin specs write, so exactly one result means neither
 // unpublished post leaked.
 
-test("searching from the form finds the one published match", async ({
+test("searching from the header bar finds the one published match", async ({
   page,
 }) => {
-  await page.goto("/search");
-  await page.getByRole("searchbox", { name: "Search posts" }).fill(SEARCH_TERM);
-  await page.getByRole("button", { name: "Search" }).click();
+  await page.goto("/");
+  const searchbox = page.getByRole("searchbox", { name: "Search posts" });
+  // The shortcut's listener attaches on hydration; a press before that is lost.
+  await expect(async () => {
+    await page.keyboard.press("/");
+    await expect(searchbox).toBeFocused({ timeout: 500 });
+  }).toPass();
+  await searchbox.fill(SEARCH_TERM);
+  await searchbox.press("Enter");
 
   await expect(page).toHaveURL(new RegExp(`/search\\?q=${SEARCH_TERM}$`));
+  await expect(
+    page.getByRole("heading", {
+      level: 1,
+      name: `Results for “${SEARCH_TERM}”`,
+    }),
+  ).toBeVisible();
   const results = page.getByRole("article");
   await expect(results).toHaveCount(1);
   const link = results.getByRole("link", { name: SEARCH_POST.title });
@@ -41,4 +53,19 @@ test("a search with no matches says so and keeps the query", async ({
   await expect(
     page.getByRole("searchbox", { name: "Search posts" }),
   ).toHaveValue(query);
+});
+
+test("a narrow screen searches from the page's own form", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await page.getByRole("link", { name: "Search", exact: true }).click();
+
+  await expect(page).toHaveURL(/\/search$/);
+  const searchbox = page.getByRole("searchbox", { name: "Search posts" });
+  await searchbox.fill(SEARCH_TERM);
+  await page.getByRole("button", { name: "Search" }).click();
+
+  await expect(page).toHaveURL(new RegExp(`/search\\?q=${SEARCH_TERM}$`));
+  await expect(page.getByRole("article")).toHaveCount(1);
+  await expect(searchbox).toHaveValue(SEARCH_TERM);
 });
