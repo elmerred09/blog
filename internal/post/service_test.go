@@ -226,6 +226,90 @@ func TestGet(t *testing.T) {
 	}
 }
 
+func TestAdjacent(t *testing.T) {
+	t.Parallel()
+	pool, _ := env.NewDB(t)
+	svc := post.NewService(pool)
+
+	dbtest.InsertPost(t, pool, dbtest.WithSlug("oldest"), dbtest.WithTitle("Oldest"), dbtest.PublishedAgo(3*time.Hour))
+	dbtest.InsertPost(t, pool, dbtest.WithSlug("middle"), dbtest.WithTitle("Middle"), dbtest.PublishedAgo(2*time.Hour))
+	dbtest.InsertPost(t, pool, dbtest.WithSlug("deleted"), dbtest.PublishedAgo(90*time.Minute), dbtest.Deleted())
+	dbtest.InsertPost(t, pool, dbtest.WithSlug("newest"), dbtest.WithTitle("Newest"), dbtest.PublishedAgo(time.Hour))
+	dbtest.InsertPost(t, pool, dbtest.WithSlug("scheduled"), dbtest.ScheduledIn(time.Hour))
+	dbtest.InsertPost(t, pool, dbtest.WithSlug("draft"), dbtest.Draft())
+
+	oldest := &post.Neighbor{Slug: "oldest", Title: "Oldest"}
+	middle := &post.Neighbor{Slug: "middle", Title: "Middle"}
+	newest := &post.Neighbor{Slug: "newest", Title: "Newest"}
+
+	tests := []struct {
+		slug         string
+		newer, older *post.Neighbor
+	}{
+		{"oldest", middle, nil},
+		{"middle", newest, oldest},
+		{"newest", nil, middle},
+	}
+	for _, tc := range tests {
+		t.Run(tc.slug, func(t *testing.T) {
+			got, err := svc.Adjacent(t.Context(), tc.slug)
+			if err != nil {
+				t.Fatalf("Adjacent: %v", err)
+			}
+			if !equalNeighbor(got.Newer, tc.newer) || !equalNeighbor(got.Older, tc.older) {
+				t.Errorf("Adjacent(%q) = newer %+v, older %+v; want newer %+v, older %+v",
+					tc.slug, got.Newer, got.Older, tc.newer, tc.older)
+			}
+		})
+	}
+
+	for _, slug := range []string{"draft", "scheduled", "deleted", "missing"} {
+		t.Run(slug+" is not found", func(t *testing.T) {
+			if _, err := svc.Adjacent(t.Context(), slug); !errors.Is(err, post.ErrNotFound) {
+				t.Errorf("Adjacent(%q) error = %v, want ErrNotFound", slug, err)
+			}
+		})
+	}
+}
+
+// Posts published at the same moment are ordered by id, as in the list, so
+// each still has the other as a neighbor.
+func TestAdjacentTies(t *testing.T) {
+	t.Parallel()
+	pool, _ := env.NewDB(t)
+	svc := post.NewService(pool)
+
+	at := dbtest.Now(t, pool).Add(-time.Hour)
+	first := dbtest.InsertPost(t, pool, dbtest.PublishedAt(at))
+	second := dbtest.InsertPost(t, pool, dbtest.PublishedAt(at))
+	if first.ID.String() > second.ID.String() {
+		first, second = second, first
+	}
+
+	got, err := svc.Adjacent(t.Context(), first.Slug)
+	if err != nil {
+		t.Fatalf("Adjacent: %v", err)
+	}
+	if got.Older != nil || got.Newer == nil || got.Newer.Slug != second.Slug {
+		t.Errorf("Adjacent(lower id) = newer %+v, older %+v; want newer %q", got.Newer, got.Older, second.Slug)
+	}
+
+	got, err = svc.Adjacent(t.Context(), second.Slug)
+	if err != nil {
+		t.Fatalf("Adjacent: %v", err)
+	}
+	if got.Newer != nil || got.Older == nil || got.Older.Slug != first.Slug {
+		t.Errorf("Adjacent(higher id) = newer %+v, older %+v; want older %q", got.Newer, got.Older, first.Slug)
+	}
+}
+
+func equalNeighbor(a, b *post.Neighbor) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return *a == *b
+}
+
 // walk lists pages from start, following Next (dir After) or Prev (dir Before)
 // until that direction runs out.
 func walk(t *testing.T, svc *post.Service, start *post.Cursor, dir post.Direction, limit int) []post.Page {

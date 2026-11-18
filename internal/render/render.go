@@ -14,6 +14,7 @@ import (
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
+	"github.com/yuin/goldmark/util"
 )
 
 // Chroma themes for the stylesheet. Render's HTML only carries class names,
@@ -33,7 +34,10 @@ func New() *Renderer {
 				highlighting.WithFormatOptions(formatOptions()...),
 			),
 		),
-		goldmark.WithParserOptions(parser.WithAutoHeadingID()), // <h2 id="...">, for anchor links
+		goldmark.WithParserOptions(
+			parser.WithAutoHeadingID(), // <h2 id="...">, for anchor links
+			parser.WithASTTransformers(util.Prioritized(headingAnchors{}, 1000)),
+		),
 	)}
 }
 

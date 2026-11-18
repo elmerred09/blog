@@ -1,9 +1,15 @@
 export { ApiError, type ApiErrorCode } from "./errors";
-export { getPost, listPosts, type ListPostsParams } from "./posts";
+export {
+  getAdjacentPosts,
+  getPost,
+  listPosts,
+  type ListPostsParams,
+} from "./posts";
 export { listSitemapEntries } from "./sitemap";
 export { searchPosts, type SearchPostsParams } from "./search";
 export { listTags } from "./tags";
 export type {
+  AdjacentPosts,
   ErrorCode,
   Page,
   Post,

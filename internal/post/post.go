@@ -29,6 +29,19 @@ type Post struct {
 	UpdatedAt time.Time
 }
 
+// Neighbor is a post linked from the bottom of another post.
+type Neighbor struct {
+	Slug  string
+	Title string
+}
+
+// Adjacent is the published posts on either side of one post, in list order.
+// A side is nil when the post is the newest or the oldest.
+type Adjacent struct {
+	Newer *Neighbor
+	Older *Neighbor
+}
+
 type Page struct {
 	// Items is never nil, newest first.
 	Items []ListItem

@@ -2,8 +2,8 @@
 import { cacheLife, cacheTag } from "next/cache";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError, getPost, listPosts } from "@/lib/api";
-import type { ErrorCode, Page, Post } from "@/lib/api";
+import { ApiError, getAdjacentPosts, getPost, listPosts } from "@/lib/api";
+import type { AdjacentPosts, ErrorCode, Page, Post } from "@/lib/api";
 
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ cacheLife: vi.fn(), cacheTag: vi.fn() }));
@@ -157,6 +157,38 @@ describe("getPost", () => {
     expect(cacheLife).toHaveBeenCalledExactlyOnceWith("hours");
     expect(new Set(vi.mocked(cacheTag).mock.calls.flat())).toEqual(
       new Set(["posts", `post:${post.slug}`]),
+    );
+  });
+});
+
+describe("getAdjacentPosts", () => {
+  const adjacent: AdjacentPosts = {
+    newer: { slug: "newer-post", title: "Newer post" },
+    older: null,
+  };
+
+  it("returns both sides, keeping a missing one null", async () => {
+    const requests = stubFetch(json(200, adjacent));
+
+    await expect(getAdjacentPosts(post.slug)).resolves.toEqual(adjacent);
+
+    expect(only(requests).pathname).toBe(`/api/v1/posts/${post.slug}/adjacent`);
+  });
+
+  it("returns null on 404", async () => {
+    stubFetch(apiError(404, "not_found", "post not found"));
+
+    await expect(getAdjacentPosts("missing")).resolves.toBeNull();
+  });
+
+  it("is cached for minutes under the posts tag, so a post going live shows up as a neighbor soon after", async () => {
+    stubFetch(json(200, adjacent));
+
+    await getAdjacentPosts(post.slug);
+
+    expect(cacheLife).toHaveBeenCalledExactlyOnceWith("minutes");
+    expect(new Set(vi.mocked(cacheTag).mock.calls.flat())).toEqual(
+      new Set(["posts"]),
     );
   });
 });

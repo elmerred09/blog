@@ -99,6 +99,30 @@ paths:
         "503":
           $ref: "#/components/responses/Timeout"
 
+  /api/v1/posts/{slug}/adjacent:
+    get:
+      operationId: getAdjacentPosts
+      summary: The published posts just newer and just older than a published post, in list order. Drafts, scheduled, and deleted posts are 404.
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The neighbors. A side is null when the post is the newest or the oldest.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdjacentPosts"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Timeout"
+
   /api/v1/sitemap:
     get:
       operationId: listSitemapEntries
@@ -518,11 +542,40 @@ components:
           items:
             $ref: "#/components/schemas/Tag"
         body_html:
-          description: Rendered from the markdown when the post is saved; raw HTML in the markdown source is escaped.
+          description: Rendered from the markdown when the post is saved, and again on deploy when the renderer's output changes; raw HTML in the markdown source is escaped.
           type: string
         updated_at:
           type: string
           format: date-time
+
+    AdjacentPosts:
+      description: The two sides repeat the same object rather than sharing a $ref, because in OpenAPI 3.0 a $ref can't be made nullable.
+      type: object
+      additionalProperties: false
+      required: [newer, older]
+      properties:
+        newer:
+          description: The post published just after this one, or null for the newest.
+          type: object
+          nullable: true
+          additionalProperties: false
+          required: [slug, title]
+          properties:
+            slug:
+              type: string
+            title:
+              type: string
+        older:
+          description: The post published just before this one, or null for the oldest.
+          type: object
+          nullable: true
+          additionalProperties: false
+          required: [slug, title]
+          properties:
+            slug:
+              type: string
+            title:
+              type: string
 
     SitemapEntry:
       type: object

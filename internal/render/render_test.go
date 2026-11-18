@@ -43,9 +43,30 @@ func TestRender(t *testing.T) {
 			notWant: []string{"javascript:"},
 		},
 		{
-			name: "headings get ids for anchor links",
+			name: "heading text links to the heading's id",
 			md:   "## Hello World\n",
-			want: []string{`<h2 id="hello-world">Hello World</h2>`},
+			want: []string{`<h2 id="hello-world"><a href="#hello-world" class="heading-anchor">Hello World</a></h2>`},
+		},
+		{
+			name: "inline markup stays inside the heading link",
+			md:   "### The `ctx` argument\n",
+			want: []string{`<h3 id="the-ctx-argument"><a href="#the-ctx-argument" class="heading-anchor">The <code>ctx</code> argument</a></h3>`},
+		},
+		{
+			name: "repeated headings get distinct ids",
+			md:   "## Setup\n\n## Setup\n",
+			want: []string{`href="#setup"`, `<h2 id="setup-1"><a href="#setup-1" class="heading-anchor">`},
+		},
+		{
+			name:    "a heading that already has a link is not wrapped",
+			md:      "## Read [the docs](https://example.com)\n",
+			want:    []string{`">Read <a href="https://example.com">the docs</a></h2>`},
+			notWant: []string{"heading-anchor"},
+		},
+		{
+			name:    "a heading with an autolink is not wrapped",
+			md:      "## See https://example.com\n",
+			notWant: []string{"heading-anchor"},
 		},
 		{
 			name: "GFM tables",

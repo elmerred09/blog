@@ -183,6 +183,9 @@ jobs:
           # compose run keeps stdin open and would consume the rest of this
           # script, so the site would never be started.
           docker compose --profile tools run --rm migrate up </dev/null
+          # Before up, so the new web container never caches a post page
+          # with HTML from the previous renderer.
+          docker compose --profile tools run --rm rerender </dev/null
           docker compose up -d
           # Compose strips one pair of quotes from an env file. Match that,
           # or curl rejects https://"example.dev"/ as a bad hostname.

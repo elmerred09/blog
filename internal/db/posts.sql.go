@@ -54,6 +54,60 @@ func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (CreateP
 	return i, err
 }
 
+const getAdjacentPosts = `-- name: GetAdjacentPosts :one
+SELECT newer.slug AS newer_slug, newer.title AS newer_title,
+       older.slug AS older_slug, older.title AS older_title
+FROM posts cur
+LEFT JOIN posts newer ON newer.id = (
+  SELECT p.id
+  FROM posts p
+  WHERE p.published_at <= CURRENT_TIMESTAMP
+    AND p.deleted_at IS NULL
+    AND (p.published_at, p.id) > (cur.published_at, cur.id)
+  ORDER BY p.published_at ASC, p.id ASC
+  LIMIT 1
+)
+LEFT JOIN posts older ON older.id = (
+  SELECT p.id
+  FROM posts p
+  WHERE p.published_at <= CURRENT_TIMESTAMP
+    AND p.deleted_at IS NULL
+    AND (p.published_at, p.id) < (cur.published_at, cur.id)
+  ORDER BY p.published_at DESC, p.id DESC
+  LIMIT 1
+)
+WHERE cur.slug = $1
+  AND cur.published_at <= CURRENT_TIMESTAMP
+  AND cur.deleted_at IS NULL
+`
+
+type GetAdjacentPostsRow struct {
+	NewerSlug  *string
+	NewerTitle *string
+	OlderSlug  *string
+	OlderTitle *string
+}
+
+// index: posts_slug_key finds the current post. Each subquery reads one entry of
+// posts_pagination_idx (published_at DESC, id DESC) WHERE published_at IS NOT NULL
+// AND deleted_at IS NULL, starting at the current post's (published_at, id):
+// older reads forward, newer reads backward (ASC is the reverse of the index).
+// posts_pkey then fetches that neighbor's row. The joins are on posts rather
+// than LATERAL subqueries so sqlc types the neighbor columns as nullable.
+// No row means the current post isn't published; a NULL side means there is
+// no post in that direction.
+func (q *Queries) GetAdjacentPosts(ctx context.Context, slug string) (GetAdjacentPostsRow, error) {
+	row := q.db.QueryRow(ctx, getAdjacentPosts, slug)
+	var i GetAdjacentPostsRow
+	err := row.Scan(
+		&i.NewerSlug,
+		&i.NewerTitle,
+		&i.OlderSlug,
+		&i.OlderTitle,
+	)
+	return i, err
+}
+
 const getPostByID = `-- name: GetPostByID :one
 SELECT id, slug, title, summary, body_md, published_at, created_at, updated_at
 FROM posts
@@ -228,6 +282,48 @@ func (q *Queries) ListAdminPostsBefore(ctx context.Context, arg ListAdminPostsBe
 	return items, nil
 }
 
+const listPostBodies = `-- name: ListPostBodies :many
+SELECT id, body_md, body_html
+FROM posts
+WHERE deleted_at IS NULL
+  AND id > $1
+ORDER BY id ASC
+LIMIT $2
+`
+
+type ListPostBodiesParams struct {
+	AfterID   uuid.UUID
+	BatchSize int32
+}
+
+type ListPostBodiesRow struct {
+	ID       uuid.UUID
+	BodyMd   string
+	BodyHtml string
+}
+
+// index: posts_pkey (id), scanned forward from after_id. The first batch
+// passes the zero UUID, which sorts before every id.
+func (q *Queries) ListPostBodies(ctx context.Context, arg ListPostBodiesParams) ([]ListPostBodiesRow, error) {
+	rows, err := q.db.Query(ctx, listPostBodies, arg.AfterID, arg.BatchSize)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPostBodiesRow
+	for rows.Next() {
+		var i ListPostBodiesRow
+		if err := rows.Scan(&i.ID, &i.BodyMd, &i.BodyHtml); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPosts = `-- name: ListPosts :many
 SELECT id, slug, title, summary, published_at, word_count
 FROM posts
@@ -388,6 +484,32 @@ func (q *Queries) ListSitemapPosts(ctx context.Context) ([]ListSitemapPostsRow, 
 		return nil, err
 	}
 	return items, nil
+}
+
+const setPostHTML = `-- name: SetPostHTML :execrows
+UPDATE posts
+SET body_html = $1
+WHERE id = $2
+  AND body_md = $3
+  AND deleted_at IS NULL
+`
+
+type SetPostHTMLParams struct {
+	BodyHtml string
+	ID       uuid.UUID
+	BodyMd   string
+}
+
+// index: posts_pkey (id).
+// Matching body_md skips a post an editor saved since ListPostBodies read it;
+// that save stored HTML from the current renderer. updated_at stays put: it is
+// the editor's optimistic-lock token, and the post's content did not change.
+func (q *Queries) SetPostHTML(ctx context.Context, arg SetPostHTMLParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setPostHTML, arg.BodyHtml, arg.ID, arg.BodyMd)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const softDeletePost = `-- name: SoftDeletePost :one

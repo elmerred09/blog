@@ -3,7 +3,7 @@ import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 
 import { apiClient, unwrap } from "./client";
-import type { Page, Post } from "./types";
+import type { AdjacentPosts, Page, Post } from "./types";
 
 export type ListPostsParams = {
   limit?: number;
@@ -49,4 +49,23 @@ export async function getPost(slug: string): Promise<Post | null> {
   const post = unwrap(result);
   cacheLife("hours");
   return post;
+}
+
+// Cached for minutes, apart from getPost's hours: a scheduled post going live
+// changes its neighbors without a save to expire anything. A save expires the
+// posts tag, which covers a neighbor's new title or slug. A 404 returns null.
+export async function getAdjacentPosts(
+  slug: string,
+): Promise<AdjacentPosts | null> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("posts");
+
+  const result = await apiClient().GET("/api/v1/posts/{slug}/adjacent", {
+    params: { path: { slug } },
+  });
+  if (result.response.status === 404) {
+    return null;
+  }
+  return unwrap(result);
 }
