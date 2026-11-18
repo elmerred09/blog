@@ -35,6 +35,40 @@ WHERE published_at <= CURRENT_TIMESTAMP
 ORDER BY published_at ASC, id ASC
 LIMIT sqlc.arg(page_size);
 
+-- name: GetAdjacentPosts :one
+-- index: posts_slug_key finds the current post. Each subquery reads one entry of
+-- posts_pagination_idx (published_at DESC, id DESC) WHERE published_at IS NOT NULL
+-- AND deleted_at IS NULL, starting at the current post's (published_at, id):
+-- older reads forward, newer reads backward (ASC is the reverse of the index).
+-- posts_pkey then fetches that neighbor's row. The joins are on posts rather
+-- than LATERAL subqueries so sqlc types the neighbor columns as nullable.
+-- No row means the current post isn't published; a NULL side means there is
+-- no post in that direction.
+SELECT newer.slug AS newer_slug, newer.title AS newer_title,
+       older.slug AS older_slug, older.title AS older_title
+FROM posts cur
+LEFT JOIN posts newer ON newer.id = (
+  SELECT p.id
+  FROM posts p
+  WHERE p.published_at <= CURRENT_TIMESTAMP
+    AND p.deleted_at IS NULL
+    AND (p.published_at, p.id) > (cur.published_at, cur.id)
+  ORDER BY p.published_at ASC, p.id ASC
+  LIMIT 1
+)
+LEFT JOIN posts older ON older.id = (
+  SELECT p.id
+  FROM posts p
+  WHERE p.published_at <= CURRENT_TIMESTAMP
+    AND p.deleted_at IS NULL
+    AND (p.published_at, p.id) < (cur.published_at, cur.id)
+  ORDER BY p.published_at DESC, p.id DESC
+  LIMIT 1
+)
+WHERE cur.slug = sqlc.arg(slug)
+  AND cur.published_at <= CURRENT_TIMESTAMP
+  AND cur.deleted_at IS NULL;
+
 -- name: CreatePost :one
 -- index: posts_slug_key (unique on slug).
 INSERT INTO posts (slug, title, summary, body_md, body_html, published_at)
@@ -77,6 +111,27 @@ LEFT JOIN updated u ON true;
 SELECT id, slug, title, summary, body_md, published_at, created_at, updated_at
 FROM posts
 WHERE id = sqlc.arg(id)
+  AND deleted_at IS NULL;
+
+-- name: ListPostBodies :many
+-- index: posts_pkey (id), scanned forward from after_id. The first batch
+-- passes the zero UUID, which sorts before every id.
+SELECT id, body_md, body_html
+FROM posts
+WHERE deleted_at IS NULL
+  AND id > sqlc.arg(after_id)
+ORDER BY id ASC
+LIMIT sqlc.arg(batch_size);
+
+-- name: SetPostHTML :execrows
+-- index: posts_pkey (id).
+-- Matching body_md skips a post an editor saved since ListPostBodies read it;
+-- that save stored HTML from the current renderer. updated_at stays put: it is
+-- the editor's optimistic-lock token, and the post's content did not change.
+UPDATE posts
+SET body_html = sqlc.arg(body_html)
+WHERE id = sqlc.arg(id)
+  AND body_md = sqlc.arg(body_md)
   AND deleted_at IS NULL;
 
 -- name: ListAdminPosts :many
