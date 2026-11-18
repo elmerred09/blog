@@ -1,31 +1,146 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
+import type { ReactNode } from "react";
 
-import { siteName } from "@/lib/site";
+import { logoGlyph, logoRadius } from "@/components/logo";
+import type { Post } from "@/lib/api";
+import { formatDate, formatReadingTime } from "@/lib/format";
+import { siteDescription, siteName } from "@/lib/site";
 
 export const ogSize = { width: 1200, height: 630 };
 
+// next/og needs local TTF or OTF files (not variable fonts or WOFF2); reading
+// them here means an image never fetches a font. Inter matches the site.
 const fontDir = join(process.cwd(), "assets/fonts");
-
-const fonts = [
-  {
-    name: "Geist",
-    data: await readFile(join(fontDir, "Geist-Regular.ttf")),
+const fonts = await Promise.all(
+  (
+    [
+      ["Inter-Regular.ttf", 400],
+      ["Inter-SemiBold.ttf", 600],
+      ["Inter-Bold.ttf", 700],
+    ] as const
+  ).map(async ([file, weight]) => ({
+    name: "Inter",
+    data: await readFile(join(fontDir, file)),
     style: "normal" as const,
-    weight: 400 as const,
-  },
-  {
-    name: "Geist",
-    data: await readFile(join(fontDir, "Geist-SemiBold.ttf")),
-    style: "normal" as const,
-    weight: 600 as const,
-  },
-];
+    weight,
+  })),
+);
 
-// ogImage draws one card. next/og needs a local TTF; the files under
-// assets/fonts are read here so the image never fetches a font.
-export function ogImage(title: string, detail: string): ImageResponse {
+// next/og can't read CSS variables; these copy the tokens in globals.css.
+const color = {
+  foreground: "#000000",
+  muted: "rgba(0, 0, 0, 0.6)",
+  brand: "#2b6fd6",
+  brandStrong: "#1f55a8",
+  chip: "#e1ecfb",
+};
+
+const maxTags = 3;
+
+// titleSize shrinks long titles so they fit in three lines.
+export function titleSize(title: string): number {
+  if (title.length <= 40) {
+    return 76;
+  }
+  if (title.length <= 72) {
+    return 64;
+  }
+  return 52;
+}
+
+export function postImage(
+  post: Pick<Post, "title" | "published_at" | "reading_minutes" | "tags">,
+): ImageResponse {
+  return card(
+    <div
+      style={{
+        display: "block",
+        fontSize: titleSize(post.title),
+        fontWeight: 700,
+        lineHeight: 1.1,
+        letterSpacing: "-0.03em",
+        lineClamp: 3,
+      }}
+    >
+      {post.title}
+    </div>,
+    <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+      <div style={{ display: "flex", fontSize: 28, color: color.muted }}>
+        {`${formatDate(post.published_at)}  ·  ${formatReadingTime(post.reading_minutes)}`}
+      </div>
+      <div style={{ display: "flex", gap: 12 }}>
+        {post.tags.slice(0, maxTags).map((tag) => (
+          <div
+            key={tag.slug}
+            style={{
+              display: "flex",
+              padding: "6px 16px",
+              borderRadius: 8,
+              background: color.chip,
+              color: color.brandStrong,
+              fontSize: 24,
+              fontWeight: 600,
+            }}
+          >
+            {tag.name}
+          </div>
+        ))}
+      </div>
+    </div>,
+  );
+}
+
+// siteImage repeats the home page's headline, highlight included.
+export function siteImage(): ImageResponse {
+  return card(
+    <div
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        fontSize: 76,
+        fontWeight: 700,
+        lineHeight: 1.1,
+        letterSpacing: "-0.03em",
+      }}
+    >
+      <span>Making sense of software,&nbsp;</span>
+      <span style={{ display: "flex", position: "relative" }}>
+        <span
+          style={{
+            position: "absolute",
+            left: -10,
+            right: -10,
+            bottom: 6,
+            height: 32,
+            borderRadius: "3px 16px 6px 12px",
+            background: color.brand,
+            opacity: 0.45,
+            transform: "rotate(-2deg)",
+          }}
+        />
+        bit by bit
+      </span>
+      <span>.</span>
+    </div>,
+    <div
+      style={{
+        display: "flex",
+        maxWidth: 900,
+        fontSize: 30,
+        lineHeight: 1.4,
+        color: color.muted,
+      }}
+    >
+      {siteDescription}
+    </div>,
+  );
+}
+
+// card is the shared frame: the header's logo and name at the top, the
+// content below, and a brand-colored edge along the bottom.
+function card(main: ReactNode, footer: ReactNode): ImageResponse {
   return new ImageResponse(
     <div
       style={{
@@ -33,45 +148,42 @@ export function ogImage(title: string, detail: string): ImageResponse {
         height: "100%",
         display: "flex",
         flexDirection: "column",
-        justifyContent: "space-between",
-        background: "#fafafa",
-        color: "#171717",
-        padding: "80px",
-        fontFamily: "Geist",
+        background: "#ffffff",
+        color: color.foreground,
+        fontFamily: "Inter",
       }}
     >
-      <div style={{ display: "flex", fontSize: 32, color: "#52525b" }}>
-        {siteName}
-      </div>
       <div
         style={{
+          flex: 1,
           display: "flex",
           flexDirection: "column",
-          width: "1040px",
+          justifyContent: "space-between",
+          padding: "72px 80px 64px",
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            fontSize: 72,
-            fontWeight: 600,
-            lineHeight: 1.15,
-            letterSpacing: "-0.03em",
-          }}
-        >
-          {title}
+        <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+          <svg width={64} height={64} viewBox="0 0 32 32">
+            <rect width="32" height="32" rx={logoRadius} fill={color.brand} />
+            <path d={logoGlyph} fill="#ffffff" />
+          </svg>
+          <div
+            style={{
+              display: "flex",
+              fontSize: 40,
+              fontWeight: 700,
+              letterSpacing: "-0.02em",
+            }}
+          >
+            {siteName}
+          </div>
         </div>
-        <div
-          style={{
-            display: "flex",
-            marginTop: 28,
-            fontSize: 32,
-            color: "#52525b",
-          }}
-        >
-          {detail}
+        <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+          {main}
+          {footer}
         </div>
       </div>
+      <div style={{ display: "flex", height: 16, background: color.brand }} />
     </div>,
     { ...ogSize, fonts },
   );
