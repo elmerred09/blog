@@ -9,6 +9,7 @@ RUN go mod download
 COPY cmd ./cmd
 COPY internal ./internal
 RUN CGO_ENABLED=0 go build -trimpath -o /out/api ./cmd/api \
+	&& CGO_ENABLED=0 go build -trimpath -o /out/blogctl ./cmd/blogctl \
 	&& CGO_ENABLED=0 go build -trimpath -o /out/goose github.com/pressly/goose/v3/cmd/goose
 
 # Debian so the image has a shell and curl. Compose probes /readyz with curl,
@@ -19,6 +20,8 @@ RUN apt-get update \
 	&& rm -rf /var/lib/apt/lists/* \
 	&& useradd --system --uid 65532 --create-home --shell /usr/sbin/nologin api
 COPY --from=build --chown=api:api /out/api /api
+# blogctl rerender ships with the renderer it rerenders with.
+COPY --from=build --chown=api:api /out/blogctl /blogctl
 USER api
 EXPOSE 8080
 ENTRYPOINT ["/api"]

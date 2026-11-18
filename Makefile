@@ -53,7 +53,7 @@ SITE_URL ?= http://localhost:3000
 # Files for web-fmt, relative to web/ or absolute; override with WEB_FILES="app/page.tsx".
 WEB_FILES ?= .
 
-.PHONY: sqlc sqlc-check lint fmt fmt-check test deps-check hooks migrate migrate-down migrate-status migrate-new up down restart otel-up otel-down seed e2e-db e2e-install e2e e2e-ui api admin-keys node-check \
+.PHONY: sqlc sqlc-check lint fmt fmt-check test deps-check hooks migrate migrate-down migrate-status migrate-new up down restart otel-up otel-down seed rerender e2e-db e2e-install e2e e2e-ui api admin-keys node-check \
 	web-install web-deps web web-build web-lint web-typecheck web-fmt web-fmt-check web-test web-types web-types-check web-check \
 	chroma-css chroma-css-check
 
@@ -95,6 +95,10 @@ seed:
 		exit 1; \
 	fi
 	docker compose exec -T postgres psql "$(GOOSE_DBSTRING)" -v ON_ERROR_STOP=1 < $(SEED_DIR)/$(SEED).sql
+
+# Re-renders every post's stored HTML with the current renderer.
+rerender:
+	DATABASE_URL="$(GOOSE_DBSTRING)" $(GO) run ./cmd/blogctl rerender
 
 # Drops and recreates the E2E database, with the extensions db/init gives the
 # dev one, then migrates it. Runs before Playwright starts the API, so nothing

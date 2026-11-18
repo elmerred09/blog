@@ -104,6 +104,20 @@ services:
       postgres:
         condition: service_healthy
 
+  # One-shot, run by the deploy after migrate: stores the HTML this image's
+  # renderer makes for every post whose stored HTML differs.
+  # `docker compose --profile tools run --rm rerender`.
+  rerender:
+    profiles: ["tools"]
+    image: ghcr.io/elmerred09/blog-api:${IMAGE_TAG:?IMAGE_TAG is required}
+    entrypoint: ["/blogctl", "rerender"]
+    logging: *logging
+    env_file: ./api.env
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   pgdata:
   caddy-data:

@@ -62,3 +62,26 @@ body {
   outline: 2px solid var(--brand);
   outline-offset: 2px;
 }
+
+/* internal/render wraps each heading's text in a link to its own id. It looks
+   like the heading; a "#" in the margin on hover or focus shows it's a link.
+   a.heading-anchor outranks the prose link color and its hover underline. */
+.prose a.heading-anchor {
+  position: relative;
+  color: inherit;
+  font-weight: inherit;
+  text-decoration: none;
+}
+.prose a.heading-anchor::before {
+  content: "#";
+  position: absolute;
+  right: 100%;
+  padding-right: 0.3em;
+  color: var(--subtle);
+  font-weight: 400;
+  opacity: 0;
+}
+.prose a.heading-anchor:hover::before,
+.prose a.heading-anchor:focus-visible::before {
+  opacity: 1;
+}
