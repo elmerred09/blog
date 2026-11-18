@@ -95,52 +95,55 @@ export function postImage(
 // siteImage repeats the home page's headline, highlight included.
 export function siteImage(): ImageResponse {
   return card(
-    <div
-      style={{
-        display: "flex",
-        flexWrap: "wrap",
-        fontSize: 76,
-        fontWeight: 700,
-        lineHeight: 1.1,
-        letterSpacing: "-0.03em",
-      }}
-    >
-      <span>Making sense of software,&nbsp;</span>
-      <span style={{ display: "flex", position: "relative" }}>
-        <span
-          style={{
-            position: "absolute",
-            left: -10,
-            right: -10,
-            bottom: 6,
-            height: 32,
-            borderRadius: "3px 16px 6px 12px",
-            background: color.brand,
-            opacity: 0.45,
-            transform: "rotate(-2deg)",
-          }}
-        />
-        bit by bit
-      </span>
-      <span>.</span>
-    </div>,
-    <div
-      style={{
-        display: "flex",
-        maxWidth: 900,
-        fontSize: 30,
-        lineHeight: 1.4,
-        color: color.muted,
-      }}
-    >
-      {siteDescription}
+    <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          fontSize: 76,
+          fontWeight: 700,
+          lineHeight: 1.1,
+          letterSpacing: "-0.03em",
+        }}
+      >
+        <span>Making sense of software,&nbsp;</span>
+        <span style={{ display: "flex", position: "relative" }}>
+          <span
+            style={{
+              position: "absolute",
+              left: -10,
+              right: -10,
+              bottom: 6,
+              height: 32,
+              borderRadius: "3px 16px 6px 12px",
+              background: color.brand,
+              opacity: 0.45,
+              transform: "rotate(-2deg)",
+            }}
+          />
+          bit by bit
+        </span>
+        <span>.</span>
+      </div>
+      <div
+        style={{
+          display: "flex",
+          maxWidth: 900,
+          fontSize: 30,
+          lineHeight: 1.4,
+          color: color.muted,
+        }}
+      >
+        {siteDescription}
+      </div>
     </div>,
   );
 }
 
-// card is the shared frame: the header's logo and name at the top, the
-// content below, and a brand-colored edge along the bottom.
-function card(main: ReactNode, footer: ReactNode): ImageResponse {
+// card is the shared frame: the content centered vertically, a bottom row
+// with the header's logo and name (and any detail on the right), and a
+// brand-colored edge along the bottom.
+function card(main: ReactNode, detail?: ReactNode): ImageResponse {
   return new ImageResponse(
     <div
       style={{
@@ -158,29 +161,36 @@ function card(main: ReactNode, footer: ReactNode): ImageResponse {
           flex: 1,
           display: "flex",
           flexDirection: "column",
-          justifyContent: "space-between",
-          padding: "72px 80px 64px",
+          padding: "64px 80px 56px",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-          <svg width={64} height={64} viewBox="0 0 32 32">
-            <rect width="32" height="32" rx={logoRadius} fill={color.brand} />
-            <path d={logoGlyph} fill="#ffffff" />
-          </svg>
-          <div
-            style={{
-              display: "flex",
-              fontSize: 40,
-              fontWeight: 700,
-              letterSpacing: "-0.02em",
-            }}
-          >
-            {siteName}
-          </div>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+        <div style={{ flex: 1, display: "flex", alignItems: "center" }}>
           {main}
-          {footer}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+            <svg width={64} height={64} viewBox="0 0 32 32">
+              <rect width="32" height="32" rx={logoRadius} fill={color.brand} />
+              <path d={logoGlyph} fill="#ffffff" />
+            </svg>
+            <div
+              style={{
+                display: "flex",
+                fontSize: 40,
+                fontWeight: 700,
+                letterSpacing: "-0.02em",
+              }}
+            >
+              {siteName}
+            </div>
+          </div>
+          {detail}
         </div>
       </div>
       <div style={{ display: "flex", height: 16, background: color.brand }} />
