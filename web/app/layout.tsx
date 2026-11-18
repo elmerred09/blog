@@ -5,7 +5,7 @@ import { Suspense } from "react";
 
 import { HeaderSearch, HeaderSearchFromUrl } from "@/components/header-search";
 import { LogoMark } from "@/components/logo";
-import { siteName, siteUrl } from "@/lib/site";
+import { siteDescription, siteName, siteUrl } from "@/lib/site";
 
 import "./globals.css";
 
@@ -19,17 +19,15 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const description = "A technical blog about software development.";
-
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
   title: { default: siteName, template: `%s | ${siteName}` },
-  description,
+  description: siteDescription,
   openGraph: {
     siteName,
     type: "website",
     locale: "en_US",
-    description,
+    description: siteDescription,
   },
   twitter: { card: "summary_large_image" },
 };

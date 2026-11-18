@@ -1,8 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { getPost } from "@/lib/api";
-import { formatDate } from "@/lib/format";
-import { ogImage, ogSize } from "@/lib/og";
+import { ogSize, postImage } from "@/lib/og";
 import { siteName } from "@/lib/site";
 
 export const alt = siteName;
@@ -19,5 +18,5 @@ export default async function Image({
   if (post === null) {
     notFound();
   }
-  return ogImage(post.title, formatDate(post.published_at));
+  return postImage(post);
 }

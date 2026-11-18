@@ -1,5 +1,10 @@
 export const siteName = "Bits by Elmer";
 
+// siteDescription is what search results and link previews show for the
+// site, and the home page's preview image prints it.
+export const siteDescription =
+  "A software engineer's notes on databases and system design: why things behave the way they do, and how the decisions behind them hold up.";
+
 // siteUrl is baked into prerendered metadata, so production must set it at
 // build time. A later change of domain means rebuilding.
 const devSiteURL = "http://localhost:3000";
