@@ -1,7 +1,6 @@
 import { expect, test as setup } from "@playwright/test";
 
 import {
-  ADMIN_NAME,
   ADMIN_STORAGE_STATE,
   VERSION_GUARD_MESSAGE,
   addSessionCookies,
@@ -26,6 +25,6 @@ setup("sign in as the admin", async ({ page, context, baseURL }) => {
     }),
   );
   await page.goto("/admin");
-  await expect(page.getByText(ADMIN_NAME), VERSION_GUARD_MESSAGE).toBeVisible();
+  await expect(page.getByRole("table"), VERSION_GUARD_MESSAGE).toBeVisible();
   await context.storageState({ path: ADMIN_STORAGE_STATE });
 });

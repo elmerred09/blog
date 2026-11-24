@@ -19,8 +19,7 @@ export const SESSION_DATA_COOKIE = "better-auth.session_data";
 // The admin project's storageState, written by auth.setup.ts.
 export const ADMIN_STORAGE_STATE = path.join(__dirname, ".auth", "admin.json");
 
-// The name in the minted user, which the admin bar shows once signed in.
-export const ADMIN_NAME = "E2E Admin";
+const ADMIN_NAME = "E2E Admin";
 
 export const VERSION_GUARD_MESSAGE =
   "a minted admin session didn't sign in; Better Auth's cookie format may have changed (better-auth upgrade?): update e2e/auth.ts";
