@@ -62,7 +62,7 @@ export function AdminPostList({ posts }: Props) {
               <td className="truncate px-6 py-4">
                 <Link
                   href={`/admin/posts/${post.id}`}
-                  className="font-medium hover:text-brand"
+                  className="font-medium underline-offset-4 hover:underline"
                 >
                   {post.title}
                 </Link>
