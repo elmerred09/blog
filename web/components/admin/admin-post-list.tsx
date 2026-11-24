@@ -33,7 +33,7 @@ type Props = {
 };
 
 const iconButton =
-  "flex size-8 items-center justify-center rounded-lg border border-line bg-background text-muted";
+  "flex size-10 items-center justify-center rounded-lg border border-line bg-background text-muted";
 
 export function AdminPostList({ posts }: Props) {
   if (posts.length === 0) {
@@ -48,7 +48,7 @@ export function AdminPostList({ posts }: Props) {
             <th className="w-32 px-4 py-3 font-medium">Status</th>
             <th className="w-40 px-4 py-3 font-medium">Published</th>
             <th className="w-40 px-4 py-3 font-medium">Updated</th>
-            <th className="w-28 px-6 py-3">
+            <th className="w-36 px-6 py-3">
               <span className="sr-only">Actions</span>
             </th>
           </tr>
