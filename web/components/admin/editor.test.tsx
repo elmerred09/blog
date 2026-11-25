@@ -5,6 +5,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import { Activity, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { Editor } from "@/components/admin/editor";
@@ -21,14 +22,11 @@ async function setup(
     url: "http://s3.test/blog/images/abc.png",
   }),
 ) {
-  const onChange = vi.fn();
-  render(
-    <Editor
-      initialMarkdown={initialMarkdown}
-      onChange={onChange}
-      upload={upload}
-    />,
-  );
+  const markdown = { current: initialMarkdown };
+  const onChange = vi.fn((value: string) => {
+    markdown.current = value;
+  });
+  render(<Editor markdown={markdown} onChange={onChange} upload={upload} />);
   // The editor mounts after the first render (immediatelyRender: false).
   const body = await screen.findByRole("textbox", { name: "Body" });
   return { onChange, upload, body };
@@ -36,6 +34,33 @@ async function setup(
 
 function lastMarkdown(onChange: ReturnType<typeof vi.fn>): string {
   return String(onChange.mock.calls.at(-1)?.[0]).trim();
+}
+
+function Hideable({
+  markdown,
+  onChange,
+}: {
+  markdown: { current: string };
+  onChange: (value: string) => void;
+}) {
+  const [mode, setMode] = useState<"visible" | "hidden">("visible");
+  return (
+    <>
+      <button type="button" onClick={() => setMode("hidden")}>
+        Hide
+      </button>
+      <button type="button" onClick={() => setMode("visible")}>
+        Show
+      </button>
+      <Activity mode={mode}>
+        <Editor
+          markdown={markdown}
+          onChange={onChange}
+          upload={async () => ({ ok: true, url: "http://s3.test/x.png" })}
+        />
+      </Activity>
+    </>
+  );
 }
 
 describe("Editor", () => {
@@ -68,6 +93,28 @@ describe("Editor", () => {
     ]) {
       expect(screen.getByRole("button", { name })).toBeDefined();
     }
+  });
+
+  it("keeps edits when the route is hidden and shown again", async () => {
+    const markdown = { current: "Hello" };
+    const onChange = vi.fn((value: string) => {
+      markdown.current = value;
+    });
+    render(<Hideable markdown={markdown} onChange={onChange} />);
+
+    await screen.findByRole("textbox", { name: "Body" });
+    fireEvent.click(screen.getByRole("button", { name: "Heading 2" }));
+    expect(markdown.current.trim()).toBe("## Hello");
+
+    fireEvent.click(screen.getByRole("button", { name: "Hide" }));
+    // Tiptap destroys the instance on a timeout after effect cleanup.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Show" }));
+
+    const body = await screen.findByRole("textbox", { name: "Body" });
+    expect(body.querySelector("h2")?.textContent).toBe("Hello");
   });
 
   it("reports markdown after a toolbar change", async () => {

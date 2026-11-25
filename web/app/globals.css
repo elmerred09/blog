@@ -58,6 +58,26 @@ body {
   color: var(--foreground);
 }
 
+/* The admin list sets this on small screens. The table scrolls inside the
+   space under the header; the page itself does not move. */
+@media (width < 64rem) {
+  html.admin-list,
+  html.admin-list body {
+    height: 100dvh;
+    overflow: hidden;
+  }
+  html.admin-list body {
+    min-height: 0;
+  }
+  html.admin-list main {
+    display: flex;
+    min-height: 0;
+    min-width: 0;
+    flex-direction: column;
+    overflow: hidden;
+  }
+}
+
 :focus-visible {
   outline: 2px solid var(--brand);
   outline-offset: 2px;

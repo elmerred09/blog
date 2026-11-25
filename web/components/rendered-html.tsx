@@ -105,7 +105,7 @@ function CopyButton({ pre }: { pre: HTMLPreElement }) {
       aria-label={state === "idle" ? "Copy code" : labels[state]}
       onClick={copy}
       className={[
-        "rounded-md border border-line bg-background px-2 py-1 font-sans text-xs font-medium text-muted",
+        "cursor-pointer rounded-md border border-line bg-background px-2 py-1 font-sans text-xs font-medium text-muted",
         "hover:border-line-strong hover:text-foreground",
         // Idle, it shows on hover or focus where there's a pointer to hover
         // with, and always on touch screens. After a click it stays to report.

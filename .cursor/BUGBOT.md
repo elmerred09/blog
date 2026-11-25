@@ -61,6 +61,8 @@ Report bugs, security problems, and breaks of the rules below. Don't comment on 
 - `updated_at` is an opaque optimistic-lock token. Flag `new Date(updated_at)`, `toISOString()`, or any reformatting of it: it drops microseconds and turns every save into a 409.
 - After an admin write, the action expires the `posts` tag and `post:<slug>`, plus `post:<old slug>` on a rename.
 - Admin tokens are EdDSA and live two minutes. Flag a longer lifetime, a different algorithm, or skipped issuer, audience, or expiry checks in the API.
+- The editor Back link confirms before discarding unsaved changes. Flag a Back link that navigates straight away, or a discard dialog nested inside the post form.
+- Tiptap is destroyed when its route is hidden and rebuilt from its `content` option. Flag an editor whose content is the markdown from the first render: saved body edits then disappear until a full reload.
 
 ## Rendering and security
 

@@ -23,7 +23,7 @@ export default function SignInPage({ searchParams }: PageProps<"/sign-in">) {
       <form action={signInWithGitHub}>
         <button
           type="submit"
-          className="rounded border border-zinc-300 px-3 py-1.5 text-sm font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+          className="cursor-pointer rounded border border-zinc-300 px-3 py-1.5 text-sm font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
         >
           Sign in with GitHub
         </button>
