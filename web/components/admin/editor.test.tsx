@@ -92,6 +92,14 @@ describe("Editor", () => {
     ).toBe(false);
   });
 
+  it("gives a code block the published page's light colors", async () => {
+    const { body } = await setup();
+
+    expect(body.className).toContain("[--tw-prose-pre-bg:#f7f7f7]");
+    expect(body.className).toContain("[--tw-prose-pre-code:rgba(0,0,0,0.8)]");
+    expect(body.className).not.toContain("prose-invert");
+  });
+
   it("sets a code block's language", async () => {
     const { onChange } = await setup();
 
