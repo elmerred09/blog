@@ -38,11 +38,13 @@ const iconButton =
 export function AdminPostList({ posts }: Props) {
   if (posts.length === 0) {
     return (
-      <p className="px-6 py-8 text-muted">No posts yet. Write the first one.</p>
+      <p className="rounded-2xl border border-line px-6 py-8 text-muted">
+        No posts yet. Write the first one.
+      </p>
     );
   }
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto rounded-2xl border border-line">
       <table className="w-full min-w-3xl table-fixed text-left text-sm">
         <thead className="border-b border-line bg-card text-muted">
           <tr>
