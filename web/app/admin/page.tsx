@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, type ReactNode } from "react";
 
 import { AdminPostList } from "@/components/admin/admin-post-list";
 import { Pagination } from "@/components/pagination";
@@ -9,12 +9,28 @@ import { listAdminPosts } from "@/lib/api/admin";
 
 export default function AdminPage({ searchParams }: PageProps<"/admin">) {
   return (
-    <>
-      <div className="mb-8 flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Posts</h1>
+    <Suspense
+      fallback={
+        <PostsCard>
+          <p className="px-6 py-8 text-muted">Loading posts…</p>
+        </PostsCard>
+      }
+    >
+      <AdminPosts searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+// The title and New post are the card's header, on its border and the same
+// hairline as the column row.
+function PostsCard({ children }: { children: ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-line">
+      <div className="flex items-center justify-between gap-4 border-b border-line px-6 py-4">
+        <h1 className="text-lg font-semibold tracking-tight">Posts</h1>
         <Link
           href="/admin/posts/new"
-          className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-strong"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-strong"
         >
           <svg
             viewBox="0 0 16 16"
@@ -30,10 +46,8 @@ export default function AdminPage({ searchParams }: PageProps<"/admin">) {
           New post
         </Link>
       </div>
-      <Suspense fallback={<p className="text-muted">Loading posts…</p>}>
-        <AdminPosts searchParams={searchParams} />
-      </Suspense>
-    </>
+      {children}
+    </div>
   );
 }
 
@@ -55,7 +69,9 @@ async function AdminPosts({
 
   return (
     <>
-      <AdminPostList posts={page.items} />
+      <PostsCard>
+        <AdminPostList posts={page.items} />
+      </PostsCard>
       <Pagination
         prevCursor={page.prev_cursor}
         nextCursor={page.next_cursor}
