@@ -3,6 +3,7 @@ import { Geist_Mono, Inter } from "next/font/google";
 import Link from "next/link";
 import { Suspense } from "react";
 
+import { AdminNav } from "@/components/admin/admin-nav";
 import { HeaderSearch, HeaderSearchFromUrl } from "@/components/header-search";
 import { LogoMark } from "@/components/logo";
 import { SiteFooter } from "@/components/site-footer";
@@ -48,9 +49,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <LogoMark className="size-8 shrink-0" />
             {siteName}
           </Link>
-          <Suspense fallback={<HeaderSearch defaultQuery="" />}>
-            <HeaderSearchFromUrl />
-          </Suspense>
+          <div className="flex items-center gap-4 sm:gap-6">
+            <Suspense fallback={null}>
+              <AdminNav />
+            </Suspense>
+            <Suspense fallback={<HeaderSearch defaultQuery="" />}>
+              <HeaderSearchFromUrl />
+            </Suspense>
+          </div>
         </header>
         <main className="mx-auto w-full max-w-[calc(960px+3rem)] flex-1 px-6 pt-24 pb-12">
           {children}
