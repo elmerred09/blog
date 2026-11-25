@@ -66,8 +66,13 @@ export function Editor({ initialMarkdown, onChange, upload }: Props) {
         role: "textbox",
         "aria-multiline": "true",
         "aria-label": "Body",
-        class:
-          "prose max-w-none prose-zinc dark:prose-invert min-h-96 px-4 py-3 focus:outline-none",
+        // The pre colors are the published page's: #f7f7f7 and the body text.
+        // Typography's own pre is zinc-800 with light text, and prose-invert
+        // would keep that.
+        class: [
+          "prose max-w-none prose-zinc min-h-96 px-4 py-3 focus:outline-none",
+          "[--tw-prose-pre-bg:#f7f7f7] [--tw-prose-pre-code:rgba(0,0,0,0.8)]",
+        ].join(" "),
       },
       handlePaste: (_view, event) => {
         const files = imageFiles(event.clipboardData);
