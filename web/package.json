@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@opentelemetry/api-logs": "^0.223.0",
-    "@opentelemetry/instrumentation": "^0.301.2",
+    "@opentelemetry/instrumentation": "^0.223.2",
     "@opentelemetry/sdk-logs": "^0.223.0",
     "@tiptap/core": "3.34.0",
     "@tiptap/extension-image": "3.34.0",
