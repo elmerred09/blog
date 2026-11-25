@@ -21,13 +21,13 @@ export default function AdminPage({ searchParams }: PageProps<"/admin">) {
   );
 }
 
-// The title and New post are the card's header, on its border and the same
-// hairline as the column row.
+// New post sits in the card's header, on its border and the same hairline as
+// the column row. The heading stays for the page outline and is not shown.
 function PostsCard({ children }: { children: ReactNode }) {
   return (
     <div className="rounded-2xl border border-line">
-      <div className="flex items-center justify-between gap-4 border-b border-line px-6 py-4">
-        <h1 className="text-lg font-semibold tracking-tight">Posts</h1>
+      <div className="flex items-center justify-end gap-4 border-b border-line px-6 py-4">
+        <h1 className="sr-only">Posts</h1>
         <Link
           href="/admin/posts/new"
           className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-strong"

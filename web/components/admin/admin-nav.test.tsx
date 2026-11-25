@@ -23,34 +23,10 @@ describe("AdminNav", () => {
     },
   );
 
-  it.each(["/admin", "/admin/posts/new"])(
-    "offers the post list and sign-out on %s",
-    (path) => {
-      pathname.current = path;
-      render(<AdminNav />);
-      expect(
-        screen.getByRole("link", { name: "All posts" }).getAttribute("href"),
-      ).toBe("/admin");
-      expect(screen.getByRole("button", { name: "Sign out" })).toBeDefined();
-    },
-  );
-
-  it("marks the post list as current only on it", () => {
-    pathname.current = "/admin";
-    const { unmount } = render(<AdminNav />);
-    expect(
-      screen
-        .getByRole("link", { name: "All posts" })
-        .getAttribute("aria-current"),
-    ).toBe("page");
-    unmount();
-
-    pathname.current = "/admin/posts/new";
+  it.each(["/admin", "/admin/posts/new"])("offers sign-out on %s", (path) => {
+    pathname.current = path;
     render(<AdminNav />);
-    expect(
-      screen
-        .getByRole("link", { name: "All posts" })
-        .getAttribute("aria-current"),
-    ).toBeNull();
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeDefined();
+    expect(screen.queryByRole("link")).toBeNull();
   });
 });
