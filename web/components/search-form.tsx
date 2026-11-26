@@ -30,7 +30,7 @@ export function SearchForm({ defaultQuery }: Props) {
       />
       <button
         type="submit"
-        className="rounded-lg border border-line bg-card px-5 py-2.5 text-sm font-medium hover:border-line-strong"
+        className="cursor-pointer rounded-lg border border-line bg-card px-5 py-2.5 text-sm font-medium hover:border-line-strong"
       >
         Search
       </button>

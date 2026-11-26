@@ -2,13 +2,17 @@
 
 import type { Editor as TiptapEditor } from "@tiptap/core";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode, type RefObject } from "react";
 
 import { editorExtensions } from "@/lib/admin/editor-extensions";
 import { altFromFileName, type UploadResult } from "@/lib/admin/upload";
 
 type Props = {
-  initialMarkdown: string;
+  // The current markdown. Read again if the editor is recreated: hiding the
+  // route runs effect cleanup, and Tiptap then destroys the instance and
+  // builds a new one from `content`. A string from the first render would
+  // drop edits until a full reload.
+  markdown: RefObject<string>;
   // Called with the whole document as markdown after every change.
   onChange: (markdown: string) => void;
   upload: (file: File) => Promise<UploadResult>;
@@ -21,7 +25,7 @@ function imageFiles(data: DataTransfer | null): File[] {
   return [...(data?.files ?? [])].filter((f) => f.type.startsWith("image/"));
 }
 
-export function Editor({ initialMarkdown, onChange, upload }: Props) {
+export function Editor({ markdown, onChange, upload }: Props) {
   const [uploads, setUploads] = useState<string[]>([]);
   const [failures, setFailures] = useState<string[]>([]);
   // editorProps closures are created once, before the editor exists.
@@ -57,7 +61,11 @@ export function Editor({ initialMarkdown, onChange, upload }: Props) {
 
   const editor = useEditor({
     extensions: editorExtensions(),
-    content: initialMarkdown,
+    // A getter, so the spread in Tiptap's create path reads markdown.current
+    // at recreation time, not the string from the last render.
+    get content() {
+      return markdown.current;
+    },
     contentType: "markdown",
     // Rendered on the client only; see post-editor-loader.tsx.
     immediatelyRender: false,
@@ -131,7 +139,7 @@ export function Editor({ initialMarkdown, onChange, upload }: Props) {
               <button
                 type="button"
                 onClick={() => setFailures([])}
-                className="underline"
+                className="cursor-pointer underline"
               >
                 Dismiss
               </button>
@@ -409,7 +417,7 @@ function Button({
       // to focus the editor again, and a keystroke in that frame is lost.
       onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
-      className="min-w-8 rounded px-1.5 py-1 text-sm text-zinc-700 hover:bg-zinc-100 disabled:opacity-40 aria-pressed:bg-zinc-200 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:aria-pressed:bg-zinc-700"
+      className="min-w-8 cursor-pointer rounded px-1.5 py-1 text-sm text-zinc-700 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 aria-pressed:bg-zinc-200 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:aria-pressed:bg-zinc-700"
     >
       {children}
     </button>

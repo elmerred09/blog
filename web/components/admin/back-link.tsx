@@ -1,9 +1,19 @@
+"use client";
+
 import Link from "next/link";
 
+import { useUnsavedGuard } from "@/components/admin/unsaved-changes";
+
 export function BackLink() {
+  const guard = useUnsavedGuard();
   return (
     <Link
       href="/admin"
+      onNavigate={(event) => {
+        if (guard?.block()) {
+          event.preventDefault();
+        }
+      }}
       className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-foreground"
     >
       <svg

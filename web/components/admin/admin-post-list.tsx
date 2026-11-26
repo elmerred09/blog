@@ -43,72 +43,77 @@ export function AdminPostList({ posts }: Props) {
       </p>
     );
   }
+  // Below lg the list fills the screen and scrolls here, sideways and down
+  // the rows. The border hugs the table, so a short list does not stretch
+  // into an empty card.
   return (
-    <div className="overflow-x-auto rounded-2xl border border-line">
-      <table className="w-full min-w-3xl table-fixed text-left text-sm">
-        <thead className="border-b border-line bg-card text-muted">
-          <tr>
-            <th className="px-6 py-3 font-medium">Title</th>
-            <th className="w-32 px-4 py-3 font-medium">Status</th>
-            <th className="w-40 px-4 py-3 font-medium">Published</th>
-            <th className="w-40 px-4 py-3 font-medium">Updated</th>
-            <th className="w-36 px-6 py-3">
-              <span className="sr-only">Actions</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-line">
-          {posts.map((post) => (
-            <tr
-              key={post.id}
-              className="transition-colors hover:bg-chip/40 has-focus-visible:bg-chip/40"
-            >
-              <td className="truncate px-6 py-4">
-                <Link
-                  href={`/admin/posts/${post.id}`}
-                  className="font-medium underline-offset-4 hover:underline"
-                >
-                  {post.title}
-                </Link>
-              </td>
-              <td className="px-4 py-4">
-                <StateBadge state={post.state} />
-              </td>
-              <td className="px-4 py-4 whitespace-nowrap text-muted">
-                {post.published_at === null ? (
-                  "—"
-                ) : (
-                  <LocalTime iso={post.published_at} />
-                )}
-              </td>
-              <td className="px-4 py-4 whitespace-nowrap text-muted">
-                <LocalTime iso={post.updated_at} />
-              </td>
-              <td className="px-6 py-4">
-                <div className="flex justify-end gap-2">
+    <div className="overflow-x-auto max-lg:min-h-0 max-lg:flex-1 max-lg:overflow-y-auto max-lg:overscroll-contain">
+      <div className="min-w-3xl overflow-hidden rounded-2xl border border-line">
+        <table className="w-full table-fixed text-left text-sm">
+          <thead className="border-b border-line bg-card text-muted">
+            <tr>
+              <th className="px-6 py-3 font-medium">Title</th>
+              <th className="w-32 px-4 py-3 font-medium">Status</th>
+              <th className="w-40 px-4 py-3 font-medium">Published</th>
+              <th className="w-40 px-4 py-3 font-medium">Updated</th>
+              <th className="w-36 px-6 py-3">
+                <span className="sr-only">Actions</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-line">
+            {posts.map((post) => (
+              <tr
+                key={post.id}
+                className="transition-colors hover:bg-chip/40 has-focus-visible:bg-chip/40"
+              >
+                <td className="truncate px-6 py-4">
                   <Link
                     href={`/admin/posts/${post.id}`}
-                    aria-label={`Edit ${post.title}`}
-                    title="Edit"
-                    className={`${iconButton} hover:border-line-strong hover:text-foreground`}
+                    className="font-medium underline-offset-4 hover:underline"
                   >
-                    <PencilIcon />
+                    {post.title}
                   </Link>
-                  <button
-                    type="button"
-                    aria-label={`Delete ${post.title}`}
-                    aria-disabled="true"
-                    title="Delete isn't available yet"
-                    className={`${iconButton} cursor-not-allowed`}
-                  >
-                    <TrashIcon />
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                </td>
+                <td className="px-4 py-4">
+                  <StateBadge state={post.state} />
+                </td>
+                <td className="px-4 py-4 whitespace-nowrap text-muted">
+                  {post.published_at === null ? (
+                    "—"
+                  ) : (
+                    <LocalTime iso={post.published_at} />
+                  )}
+                </td>
+                <td className="px-4 py-4 whitespace-nowrap text-muted">
+                  <LocalTime iso={post.updated_at} />
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex justify-end gap-2">
+                    <Link
+                      href={`/admin/posts/${post.id}`}
+                      aria-label={`Edit ${post.title}`}
+                      title="Edit"
+                      className={`${iconButton} hover:border-line-strong hover:text-foreground`}
+                    >
+                      <PencilIcon />
+                    </Link>
+                    <button
+                      type="button"
+                      aria-label={`Delete ${post.title}`}
+                      aria-disabled="true"
+                      title="Delete isn't available yet"
+                      className={`${iconButton} cursor-not-allowed`}
+                    >
+                      <TrashIcon />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

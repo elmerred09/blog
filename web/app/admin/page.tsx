@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
+import { AdminListFrame } from "@/components/admin/admin-list-frame";
 import { AdminPostList } from "@/components/admin/admin-post-list";
 import { Pagination } from "@/components/pagination";
 import { requireAdmin } from "@/lib/admin/session";
@@ -9,8 +10,8 @@ import { listAdminPosts } from "@/lib/api/admin";
 
 export default function AdminPage({ searchParams }: PageProps<"/admin">) {
   return (
-    <>
-      <div className="mb-8 flex justify-end">
+    <AdminListFrame>
+      <div className="mb-8 flex shrink-0 justify-end">
         <h1 className="sr-only">Posts</h1>
         <Link
           href="/admin/posts/new"
@@ -30,10 +31,12 @@ export default function AdminPage({ searchParams }: PageProps<"/admin">) {
           New post
         </Link>
       </div>
-      <Suspense fallback={<p className="text-muted">Loading posts…</p>}>
-        <AdminPosts searchParams={searchParams} />
-      </Suspense>
-    </>
+      <div className="max-lg:flex max-lg:min-h-0 max-lg:flex-1 max-lg:flex-col">
+        <Suspense fallback={<p className="text-muted">Loading posts…</p>}>
+          <AdminPosts searchParams={searchParams} />
+        </Suspense>
+      </div>
+    </AdminListFrame>
   );
 }
 
@@ -54,13 +57,15 @@ async function AdminPosts({
   }
 
   return (
-    <>
+    <div className="max-lg:flex max-lg:min-h-0 max-lg:flex-1 max-lg:flex-col">
       <AdminPostList posts={page.items} />
-      <Pagination
-        prevCursor={page.prev_cursor}
-        nextCursor={page.next_cursor}
-        pathname="/admin"
-      />
-    </>
+      <div className="max-lg:shrink-0">
+        <Pagination
+          prevCursor={page.prev_cursor}
+          nextCursor={page.next_cursor}
+          pathname="/admin"
+        />
+      </div>
+    </div>
   );
 }

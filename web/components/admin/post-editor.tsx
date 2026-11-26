@@ -14,12 +14,14 @@ import { createImageUpload, previewPost, savePost } from "@/app/admin/actions";
 import { Editor } from "@/components/admin/editor";
 import { PublishControls } from "@/components/admin/publish-controls";
 import { TagInput } from "@/components/admin/tag-input";
+import { useRegisterUnsaved } from "@/components/admin/unsaved-changes";
 import { PostBody } from "@/components/post-body";
 import {
   initialPublishState,
   publishedAtFor,
   type PublishState,
 } from "@/lib/admin/publish";
+import { sameDraft, type Draft } from "@/lib/admin/draft";
 import { slugify } from "@/lib/admin/slug";
 import { uploadImage } from "@/lib/admin/upload";
 import type { Failure } from "@/lib/api/admin";
@@ -46,6 +48,17 @@ type Problems = Partial<Record<string, string>>;
 
 function upload(file: File) {
   return uploadImage(file, createImageUpload);
+}
+
+function draftFrom(post: AdminPost | null): Draft {
+  return {
+    title: post?.title ?? "",
+    slug: post?.slug ?? "",
+    summary: post?.summary ?? "",
+    body: post?.body_md ?? "",
+    tags: post?.tags.map((tag) => tag.name) ?? [],
+    publish: initialPublishState(post?.published_at ?? null, new Date()),
+  };
 }
 
 function savedFrom(post: AdminPost): Saved {
@@ -123,18 +136,18 @@ function PostForm({
   onCreated,
 }: Props & { onCreated: () => void }) {
   const router = useRouter();
+  const [initialDraft] = useState(() => draftFrom(post));
+  // What Back compares against: the load, then each successful save.
+  const baseline = useRef(initialDraft);
   const [saved, setSaved] = useState<Saved | null>(post && savedFrom(post));
-  const [title, setTitle] = useState(post?.title ?? "");
-  const [slug, setSlug] = useState(post?.slug ?? "");
+  const [title, setTitle] = useState(initialDraft.title);
+  const [slug, setSlug] = useState(initialDraft.slug);
   // A new post's slug follows its title until edited by hand.
   const [slugEdited, setSlugEdited] = useState(post !== null);
-  const [summary, setSummary] = useState(post?.summary ?? "");
-  const [initialBody] = useState(post?.body_md ?? "");
-  const body = useRef(initialBody);
-  const [tags, setTags] = useState(post?.tags.map((t) => t.name) ?? []);
-  const [publish, setPublish] = useState<PublishState>(() =>
-    initialPublishState(post?.published_at ?? null, new Date()),
-  );
+  const [summary, setSummary] = useState(initialDraft.summary);
+  const body = useRef(initialDraft.body);
+  const [tags, setTags] = useState(initialDraft.tags);
+  const [publish, setPublish] = useState<PublishState>(initialDraft.publish);
   const [problems, setProblems] = useState<Problems>({});
   const [alert, setAlert] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -154,8 +167,17 @@ function PostForm({
 
   function save() {
     setStatus(null);
-    const publishedAt = publishedAtFor(
+    // Captured now, so keystrokes during the request stay unsaved.
+    const sent: Draft = {
+      title,
+      slug,
+      summary,
+      body: body.current,
+      tags: [...tags],
       publish,
+    };
+    const publishedAt = publishedAtFor(
+      sent.publish,
       saved?.publishedAt ?? null,
       new Date(),
     );
@@ -169,12 +191,12 @@ function PostForm({
         loadedSlug: saved?.slug ?? null,
         updatedAt: saved?.updatedAt ?? null,
         post: {
-          slug,
-          title,
-          summary,
-          body_md: body.current,
+          slug: sent.slug,
+          title: sent.title,
+          summary: sent.summary,
+          body_md: sent.body,
           published_at: publishedAt.value,
-          tags,
+          tags: sent.tags,
         },
       });
       if (!result.ok) {
@@ -186,10 +208,12 @@ function PostForm({
       setProblems({});
       setAlert(null);
       const next = savedFrom(result.value);
+      const nextPublish = initialPublishState(next.publishedAt, new Date());
+      baseline.current = { ...sent, slug: next.slug, publish: nextPublish };
       setSaved(next);
       setSlug(next.slug);
       setSlugEdited(true);
-      setPublish(initialPublishState(next.publishedAt, new Date()));
+      setPublish(nextPublish);
       setStatus(`Saved (${next.state}).`);
       if (saved === null) {
         onCreated();
@@ -212,6 +236,18 @@ function PostForm({
       );
     });
   }
+
+  useRegisterUnsaved(
+    () =>
+      !sameDraft(baseline.current, {
+        title,
+        slug,
+        summary,
+        body: body.current,
+        tags,
+        publish,
+      }),
+  );
 
   const renaming =
     saved !== null && saved.state === "published" && slug !== saved.slug;
@@ -263,9 +299,9 @@ function PostForm({
         {/* Hidden, not unmounted: the editor holds the undo history. */}
         <div hidden={tab !== "write"}>
           <Editor
-            initialMarkdown={initialBody}
-            onChange={(markdown) => {
-              body.current = markdown;
+            markdown={body}
+            onChange={(next) => {
+              body.current = next;
             }}
             upload={upload}
           />
@@ -320,7 +356,7 @@ function PostForm({
         <button
           type="submit"
           disabled={saving}
-          className="rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+          className="cursor-pointer rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
         >
           {saving ? "Saving…" : "Save"}
         </button>
@@ -388,7 +424,7 @@ function Tab({
       role="tab"
       aria-selected={selected}
       onClick={onClick}
-      className="border-b-2 border-transparent pb-1 font-medium text-zinc-500 aria-selected:border-zinc-900 aria-selected:text-zinc-900 dark:aria-selected:border-zinc-100 dark:aria-selected:text-zinc-100"
+      className="cursor-pointer border-b-2 border-transparent pb-1 font-medium text-zinc-500 aria-selected:border-zinc-900 aria-selected:text-zinc-900 dark:aria-selected:border-zinc-100 dark:aria-selected:text-zinc-100"
     >
       {children}
     </button>

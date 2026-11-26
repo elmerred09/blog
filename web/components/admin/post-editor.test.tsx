@@ -5,7 +5,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { Activity } from "react";
+import { Activity, useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createImageUpload, previewPost, savePost } from "@/app/admin/actions";
@@ -22,18 +22,23 @@ vi.mock("@/app/admin/actions", () => ({
 // The real editor is covered by editor.test.tsx; a textarea stands in here.
 vi.mock("@/components/admin/editor", () => ({
   Editor: ({
-    initialMarkdown,
+    markdown,
     onChange,
   }: {
-    initialMarkdown: string;
+    markdown: { current: string };
     onChange: (md: string) => void;
-  }) => (
-    <textarea
-      aria-label="Body"
-      defaultValue={initialMarkdown}
-      onChange={(e) => onChange(e.target.value)}
-    />
-  ),
+  }) => {
+    // The first markdown only, like Tiptap's initial content. Later renders
+    // must not write the ref back into the field.
+    const [initial] = useState(() => markdown.current);
+    return (
+      <textarea
+        aria-label="Body"
+        defaultValue={initial}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    );
+  },
 }));
 
 const LOCK = "2026-10-18T12:00:12.345678Z";

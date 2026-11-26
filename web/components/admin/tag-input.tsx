@@ -80,7 +80,7 @@ export function TagInput({ value, onChange, suggestions, error }: Props) {
                   type="button"
                   aria-label={`Remove ${tag}`}
                   onClick={() => onChange(value.filter((t) => t !== tag))}
-                  className="text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+                  className="cursor-pointer text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
                 >
                   ×
                 </button>

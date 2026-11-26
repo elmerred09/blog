@@ -14,6 +14,51 @@ import { CODE_POST, createPost } from "./fixtures";
 // Every spec writes its own posts under a unique slug and reads only those,
 // so they can run in parallel with each other and with the public specs.
 
+test("back confirms before discarding unsaved edits", async ({
+  page,
+}, testInfo) => {
+  const slug = uniqueSlug(testInfo, "unsaved");
+  const title = `Unsaved ${slug}`;
+  await openEditor(page, "/admin/posts/new");
+
+  await page.getByRole("link", { name: "Back" }).click();
+  await expect(page).toHaveURL(/\/admin$/);
+
+  await openEditor(page, "/admin/posts/new");
+  await field(page, "Title").fill(title);
+  await page.getByRole("link", { name: "Back" }).click();
+  const dialog = page.getByRole("dialog", { name: "Discard unsaved changes?" });
+  await expect(dialog).toBeVisible();
+  await expect(page).toHaveURL(/\/admin\/posts\/new$/);
+
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(field(page, "Title")).toHaveValue(title);
+
+  await page.getByRole("link", { name: "Back" }).click();
+  await page.mouse.click(8, 8);
+  await expect(dialog).toHaveCount(0);
+  await expect(field(page, "Title")).toHaveValue(title);
+
+  await page.getByRole("link", { name: "Back" }).click();
+  await dialog.getByRole("button", { name: "Keep editing" }).click();
+  await expect(field(page, "Title")).toHaveValue(title);
+
+  await page.getByRole("link", { name: "Back" }).click();
+  await dialog.getByRole("link", { name: "Discard changes" }).click();
+  await expect(page).toHaveURL(/\/admin$/);
+
+  await page.goBack();
+  await expect(page).toHaveURL(/\/admin\/posts\/new$/);
+  await expect(dialog).toHaveCount(0);
+  await expect(field(page, "Title")).toHaveValue(title);
+
+  await fillPost(page, { title, slug });
+  await save(page, "draft");
+  await page.getByRole("link", { name: "Back" }).click();
+  await expect(page).toHaveURL(/\/admin$/);
+});
+
 test("a draft stays private until it's published, then shows at once", async ({
   page,
   context,
@@ -150,6 +195,36 @@ test("tags added and removed in the editor are the ones published", async ({
   await expect(
     page.getByRole("list", { name: "Tags" }).getByRole("listitem"),
   ).toHaveText(["Alpha E2E", "Beta E2E"]);
+});
+
+test("a saved edit is on the post after leaving and coming back", async ({
+  page,
+  request,
+}, testInfo) => {
+  const slug = uniqueSlug(testInfo, "revisit");
+  const title = `Revisit ${slug}`;
+  const post = await createPost(request, env, {
+    slug,
+    title,
+    summary: "Edited, then revisited.",
+    body_md: "Before the edit.",
+    published_at: null,
+    tags: [],
+  });
+  await openEditor(page, `/admin/posts/${post.id}`);
+  await page.getByRole("textbox", { name: "Body" }).click();
+  await page.keyboard.press("ControlOrMeta+a");
+  await page.keyboard.type("After the edit.");
+  await save(page, "draft");
+
+  await page.getByRole("link", { name: "Back" }).click();
+  await expect(page).toHaveURL(/\/admin$/);
+  await page.getByRole("link", { name: title, exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/admin/posts/${post.id}$`));
+  await expect(page.getByRole("textbox", { name: "Body" })).toContainText(
+    "After the edit.",
+  );
+  await expect(field(page, "Title")).toHaveValue(title);
 });
 
 test("saving over a newer save shows the conflict", async ({
