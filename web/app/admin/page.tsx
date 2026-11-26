@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { AdminListFrame } from "@/components/admin/admin-list-frame";
 import { AdminPostList } from "@/components/admin/admin-post-list";
 import { Pagination } from "@/components/pagination";
+import { AdminPostListSkeleton } from "@/components/skeleton";
 import { requireAdmin } from "@/lib/admin/session";
 import { listAdminPosts } from "@/lib/api/admin";
 
@@ -32,7 +33,7 @@ export default function AdminPage({ searchParams }: PageProps<"/admin">) {
         </Link>
       </div>
       <div className="max-lg:flex max-lg:min-h-0 max-lg:flex-1 max-lg:flex-col">
-        <Suspense fallback={<p className="text-muted">Loading posts…</p>}>
+        <Suspense fallback={<AdminPostListSkeleton />}>
           <AdminPosts searchParams={searchParams} />
         </Suspense>
       </div>
