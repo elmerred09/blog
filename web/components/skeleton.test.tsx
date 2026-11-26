@@ -2,6 +2,8 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import {
+  AdminPostListSkeleton,
+  PostEditorSkeleton,
   PostListSkeleton,
   PostSkeleton,
   TopicListSkeleton,
@@ -31,5 +33,31 @@ describe("PostListSkeleton", () => {
     render(<PostListSkeleton />);
 
     expect(screen.getByRole("status").textContent).toBe("Loading posts…");
+  });
+});
+
+describe("AdminPostListSkeleton", () => {
+  it("keeps the column names and announces that posts are loading", () => {
+    render(<AdminPostListSkeleton />);
+
+    expect(screen.getByRole("status").textContent).toBe("Loading posts…");
+    expect(screen.getByRole("columnheader", { name: "Title" })).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "Status" })).toBeTruthy();
+    expect(
+      screen.getByRole("columnheader", { name: "Published" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "Updated" })).toBeTruthy();
+  });
+});
+
+describe("PostEditorSkeleton", () => {
+  it("keeps the field labels and announces that the editor is loading", () => {
+    render(<PostEditorSkeleton />);
+
+    expect(screen.getByRole("status").textContent).toBe("Loading editor…");
+    // Labels are visual only: the fields are not real inputs yet.
+    expect(screen.getByText("Title")).toBeTruthy();
+    expect(screen.getByText("Publishing")).toBeTruthy();
+    expect(screen.queryByRole("textbox")).toBeNull();
   });
 });
