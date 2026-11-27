@@ -41,8 +41,8 @@ export function TopicNav({ tags, current }: Props & { current: string }) {
 // The devTalk template's tag-topic chip in its two sizes. Hover darkens the
 // border; the current chip is solid foreground.
 const chipSizes = {
-  default: "h-10 rounded-lg px-4 text-sm",
-  large: "h-20 rounded-2xl px-8 text-base",
+  default: "h-10 rounded-lg px-4",
+  large: "h-20 rounded-2xl px-8",
 };
 
 function TopicChips({
@@ -59,7 +59,7 @@ function TopicChips({
             <Link
               href={`/tags/${tag.slug}`}
               aria-current={isCurrent ? "page" : undefined}
-              className={`flex items-center border transition-colors duration-200 hover:underline ${chipSizes[size]} ${
+              className={`flex items-center border text-sm transition-colors duration-200 hover:underline ${chipSizes[size]} ${
                 isCurrent
                   ? "border-foreground bg-foreground text-background"
                   : "border-line bg-card text-muted hover:border-subtle"
