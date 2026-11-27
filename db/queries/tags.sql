@@ -4,9 +4,16 @@ INSERT INTO tags (slug, name)
 VALUES (sqlc.arg(slug), sqlc.arg(name))
 ON CONFLICT (slug) DO NOTHING;
 
+-- name: UpdateTagColor :execrows
+-- index: tags_slug_key (unique on slug). Zero rows means no such tag.
+-- tags_color_check rejects a name outside the palette.
+UPDATE tags
+SET color = sqlc.arg(color), updated_at = CURRENT_TIMESTAMP
+WHERE slug = sqlc.arg(slug);
+
 -- name: GetTagsBySlugs :many
 -- index: tags_slug_key (unique on slug), one probe per slug in the array.
-SELECT id, slug, name
+SELECT id, slug, name, color
 FROM tags
 WHERE slug = ANY(sqlc.arg(slugs)::text[])
 ORDER BY slug ASC;
@@ -14,7 +21,7 @@ ORDER BY slug ASC;
 -- name: ListTagsForPost :many
 -- index: post_tags_pkey (post_id, tag_id) finds the post's rows by its leading column; tags_pkey for the join.
 -- ORDER BY t.slug sorts in memory, fine for a handful of tags per post.
-SELECT t.id, t.slug, t.name
+SELECT t.id, t.slug, t.name, t.color
 FROM tags t
 JOIN post_tags pt ON t.id = pt.tag_id
 WHERE pt.post_id = sqlc.arg(post_id)
@@ -22,7 +29,7 @@ ORDER BY t.slug ASC;
 
 -- name: ListTagsForPosts :many
 -- index: post_tags_pkey (post_id, tag_id).
-SELECT pt.post_id, t.slug, t.name
+SELECT pt.post_id, t.slug, t.name, t.color
 FROM tags t
 JOIN post_tags pt ON t.id = pt.tag_id
 WHERE pt.post_id = ANY(sqlc.arg(post_ids)::uuid[])
@@ -47,7 +54,7 @@ ON CONFLICT (post_id, tag_id) DO NOTHING;
 -- With published_only, a tag with no published post is dropped after the
 -- count, so the public list can't reveal a draft's tags. Without it, every
 -- tag is listed, for the editor. Both read all of tags, a small table.
-SELECT t.id, t.slug, t.name, count(p.id) AS published_posts
+SELECT t.id, t.slug, t.name, t.color, count(p.id) AS published_posts
 FROM tags t
 LEFT JOIN post_tags pt ON pt.tag_id = t.id
 LEFT JOIN posts p

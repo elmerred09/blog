@@ -35,16 +35,17 @@ func (q *Queries) DeleteTagsForPostExcept(ctx context.Context, arg DeleteTagsFor
 }
 
 const getTagsBySlugs = `-- name: GetTagsBySlugs :many
-SELECT id, slug, name
+SELECT id, slug, name, color
 FROM tags
 WHERE slug = ANY($1::text[])
 ORDER BY slug ASC
 `
 
 type GetTagsBySlugsRow struct {
-	ID   int32
-	Slug string
-	Name string
+	ID    int32
+	Slug  string
+	Name  string
+	Color string
 }
 
 // index: tags_slug_key (unique on slug), one probe per slug in the array.
@@ -57,7 +58,12 @@ func (q *Queries) GetTagsBySlugs(ctx context.Context, slugs []string) ([]GetTags
 	var items []GetTagsBySlugsRow
 	for rows.Next() {
 		var i GetTagsBySlugsRow
-		if err := rows.Scan(&i.ID, &i.Slug, &i.Name); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Slug,
+			&i.Name,
+			&i.Color,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -213,7 +219,7 @@ func (q *Queries) ListPostsByTagBefore(ctx context.Context, arg ListPostsByTagBe
 }
 
 const listTags = `-- name: ListTags :many
-SELECT t.id, t.slug, t.name, count(p.id) AS published_posts
+SELECT t.id, t.slug, t.name, t.color, count(p.id) AS published_posts
 FROM tags t
 LEFT JOIN post_tags pt ON pt.tag_id = t.id
 LEFT JOIN posts p
@@ -229,6 +235,7 @@ type ListTagsRow struct {
 	ID             int32
 	Slug           string
 	Name           string
+	Color          string
 	PublishedPosts int64
 }
 
@@ -249,6 +256,7 @@ func (q *Queries) ListTags(ctx context.Context, publishedOnly bool) ([]ListTagsR
 			&i.ID,
 			&i.Slug,
 			&i.Name,
+			&i.Color,
 			&i.PublishedPosts,
 		); err != nil {
 			return nil, err
@@ -262,7 +270,7 @@ func (q *Queries) ListTags(ctx context.Context, publishedOnly bool) ([]ListTagsR
 }
 
 const listTagsForPost = `-- name: ListTagsForPost :many
-SELECT t.id, t.slug, t.name
+SELECT t.id, t.slug, t.name, t.color
 FROM tags t
 JOIN post_tags pt ON t.id = pt.tag_id
 WHERE pt.post_id = $1
@@ -270,9 +278,10 @@ ORDER BY t.slug ASC
 `
 
 type ListTagsForPostRow struct {
-	ID   int32
-	Slug string
-	Name string
+	ID    int32
+	Slug  string
+	Name  string
+	Color string
 }
 
 // index: post_tags_pkey (post_id, tag_id) finds the post's rows by its leading column; tags_pkey for the join.
@@ -286,7 +295,12 @@ func (q *Queries) ListTagsForPost(ctx context.Context, postID uuid.UUID) ([]List
 	var items []ListTagsForPostRow
 	for rows.Next() {
 		var i ListTagsForPostRow
-		if err := rows.Scan(&i.ID, &i.Slug, &i.Name); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Slug,
+			&i.Name,
+			&i.Color,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -298,7 +312,7 @@ func (q *Queries) ListTagsForPost(ctx context.Context, postID uuid.UUID) ([]List
 }
 
 const listTagsForPosts = `-- name: ListTagsForPosts :many
-SELECT pt.post_id, t.slug, t.name
+SELECT pt.post_id, t.slug, t.name, t.color
 FROM tags t
 JOIN post_tags pt ON t.id = pt.tag_id
 WHERE pt.post_id = ANY($1::uuid[])
@@ -309,6 +323,7 @@ type ListTagsForPostsRow struct {
 	PostID uuid.UUID
 	Slug   string
 	Name   string
+	Color  string
 }
 
 // index: post_tags_pkey (post_id, tag_id).
@@ -321,7 +336,12 @@ func (q *Queries) ListTagsForPosts(ctx context.Context, postIds []uuid.UUID) ([]
 	var items []ListTagsForPostsRow
 	for rows.Next() {
 		var i ListTagsForPostsRow
-		if err := rows.Scan(&i.PostID, &i.Slug, &i.Name); err != nil {
+		if err := rows.Scan(
+			&i.PostID,
+			&i.Slug,
+			&i.Name,
+			&i.Color,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -346,6 +366,27 @@ type SetTagsForPostParams struct {
 // index: post_tags_pkey (post_id, tag_id).
 func (q *Queries) SetTagsForPost(ctx context.Context, arg SetTagsForPostParams) (int64, error) {
 	result, err := q.db.Exec(ctx, setTagsForPost, arg.PostID, arg.TagIds)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const updateTagColor = `-- name: UpdateTagColor :execrows
+UPDATE tags
+SET color = $1, updated_at = CURRENT_TIMESTAMP
+WHERE slug = $2
+`
+
+type UpdateTagColorParams struct {
+	Color string
+	Slug  string
+}
+
+// index: tags_slug_key (unique on slug). Zero rows means no such tag.
+// tags_color_check rejects a name outside the palette.
+func (q *Queries) UpdateTagColor(ctx context.Context, arg UpdateTagColorParams) (int64, error) {
+	result, err := q.db.Exec(ctx, updateTagColor, arg.Color, arg.Slug)
 	if err != nil {
 		return 0, err
 	}
