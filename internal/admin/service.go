@@ -1,5 +1,5 @@
-// Package admin is the write side of posts: the editor's create, update, list,
-// and preview. The public read API stays in internal/post.
+// Package admin is the write side of posts: the editor's create, update,
+// delete, list, and preview. The public read API stays in internal/post.
 package admin
 
 import (
@@ -214,6 +214,21 @@ func (s *Service) adminPage(rows []db.ListAdminPostsRow, withPrev, withNext bool
 // Get returns the post, in any state, or ErrNotFound.
 func (s *Service) Get(ctx context.Context, id uuid.UUID) (Post, error) {
 	return get(ctx, s.q, id)
+}
+
+// Delete soft-deletes the post: it sets deleted_at, which every read checks,
+// so the post leaves the public site and the admin. The row and its slug stay;
+// a new post can't take the slug, and clearing deleted_at restores it. A post
+// that is missing or already deleted is ErrNotFound.
+func (s *Service) Delete(ctx context.Context, id uuid.UUID) error {
+	_, err := s.q.SoftDeletePost(ctx, id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("delete post %s: %w", id, ErrNotFound)
+	}
+	if err != nil {
+		return fmt.Errorf("delete post %s: %w", id, err)
+	}
+	return nil
 }
 
 // get reads the post with q, so a save can read it back on the same

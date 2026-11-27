@@ -358,6 +358,29 @@ paths:
         "503":
           $ref: "#/components/responses/Timeout"
 
+    delete:
+      operationId: deleteAdminPost
+      summary: Soft-delete a post. It leaves the public site and the admin; its slug stays taken.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PostID"
+      responses:
+        "204":
+          description: The post is deleted.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Timeout"
+
   /api/v1/admin/preview:
     post:
       operationId: previewPost

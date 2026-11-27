@@ -156,6 +156,7 @@ func TestAdminRequiresAuth(t *testing.T) {
 		{http.MethodPost, "/api/v1/admin/posts"},
 		{http.MethodGet, "/api/v1/admin/posts/" + uuid.NewString()},
 		{http.MethodPut, "/api/v1/admin/posts/" + uuid.NewString()},
+		{http.MethodDelete, "/api/v1/admin/posts/" + uuid.NewString()},
 		{http.MethodPost, "/api/v1/admin/preview"},
 		{http.MethodPost, "/api/v1/admin/uploads"},
 		{http.MethodGet, "/api/v1/admin/tags"},
@@ -392,5 +393,37 @@ func TestSetTagColor(t *testing.T) {
 
 	t.Run("an unknown tag is 404", func(t *testing.T) {
 		wantError(t, patch("rust", map[string]any{"color": "teal"}), http.StatusNotFound, codeNotFound)
+	})
+}
+
+func TestDeleteAdminPost(t *testing.T) {
+	t.Parallel()
+	api := newAdminAPI(t)
+	p := dbtest.InsertPost(t, api.pool, dbtest.WithSlug("doomed"))
+	target := "/api/v1/admin/posts/" + p.ID.String()
+	del := func(target string) *httptest.ResponseRecorder {
+		return serve(t, api.h, adminRequest(t, http.MethodDelete, target, api.token, nil))
+	}
+
+	if rec := get(t, api.h, "/api/v1/posts/doomed"); rec.Code != http.StatusOK {
+		t.Fatalf("public post before delete: status = %d", rec.Code)
+	}
+
+	rec := del(target)
+	if rec.Code != http.StatusNoContent || rec.Body.Len() != 0 {
+		t.Fatalf("delete: status = %d, body %q; want 204 and no body", rec.Code, rec.Body)
+	}
+
+	wantError(t, get(t, api.h, "/api/v1/posts/doomed"), http.StatusNotFound, codeNotFound)
+	wantError(t, serve(t, api.h, adminRequest(t, http.MethodGet, target, api.token, nil)), http.StatusNotFound, codeNotFound)
+
+	t.Run("deleting again is 404", func(t *testing.T) {
+		wantError(t, del(target), http.StatusNotFound, codeNotFound)
+	})
+	t.Run("an unknown id is 404", func(t *testing.T) {
+		wantError(t, del("/api/v1/admin/posts/"+uuid.NewString()), http.StatusNotFound, codeNotFound)
+	})
+	t.Run("a malformed id is 400", func(t *testing.T) {
+		wantError(t, del("/api/v1/admin/posts/not-a-uuid"), http.StatusBadRequest, codeInvalidRequest)
 	})
 }
