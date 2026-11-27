@@ -1,9 +1,9 @@
 import { env, expect, test, uniqueSlug } from "./admin";
 import { createPost } from "./fixtures";
 
-// --tag-teal in app/globals.css, as the browser reports it.
-const TEAL = "rgb(213, 247, 244)";
-const SLATE = "rgb(234, 239, 244)";
+// --tag-teal and --tag-slate in app/globals.css, as the browser reports them.
+const TEAL = "rgba(49, 133, 150, 0.25)";
+const SLATE = "rgba(100, 116, 139, 0.25)";
 
 test("a tag's color shows on its chip once the admin picks it", async ({
   page,

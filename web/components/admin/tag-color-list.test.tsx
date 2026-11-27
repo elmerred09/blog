@@ -33,7 +33,24 @@ describe("TagColorList", () => {
       .getByRole("group", { name: "Color for Go" })
       .querySelectorAll("input[type=radio]");
     expect(Array.from(goSwatches, (r) => r.getAttribute("aria-label"))).toEqual(
-      ["Slate", "Rose", "Orange", "Amber", "Green", "Teal", "Violet", "Pink"],
+      [
+        "Slate",
+        "Coral",
+        "Rust",
+        "Amber",
+        "Yellow",
+        "Olive",
+        "Brown",
+        "Forest",
+        "Green",
+        "Teal",
+        "Petrol",
+        "Blue",
+        "Navy",
+        "Indigo",
+        "Purple",
+        "Pink",
+      ],
     );
   });
 
@@ -60,7 +77,7 @@ describe("TagColorList", () => {
     });
     render(<TagColorList tags={tags} />);
 
-    fireEvent.click(swatch("Go", "rose"));
+    fireEvent.click(swatch("Go", "coral"));
 
     await waitFor(() =>
       expect(screen.getByRole("alert").textContent).toBe("tag not found"),
@@ -73,7 +90,7 @@ describe("TagColorList", () => {
     vi.mocked(setTagColor).mockRejectedValue(new Error("network"));
     render(<TagColorList tags={tags} />);
 
-    fireEvent.click(swatch("Go", "rose"));
+    fireEvent.click(swatch("Go", "coral"));
 
     await waitFor(() =>
       expect(screen.getByRole("alert").textContent).toBe(

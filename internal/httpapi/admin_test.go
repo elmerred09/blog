@@ -373,7 +373,7 @@ func TestSetTagColor(t *testing.T) {
 	})
 
 	t.Run("a color outside the palette is a problem on color", func(t *testing.T) {
-		rec := patch("go", map[string]any{"color": "blue"})
+		rec := patch("go", map[string]any{"color": "magenta"})
 		wantError(t, rec, http.StatusBadRequest, codeInvalidRequest)
 		body := decode[errorBody](t, rec)
 		if len(body.Error.Problems) != 1 || body.Error.Problems[0].Field != "color" {

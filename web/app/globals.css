@@ -21,25 +21,42 @@
   --brand-strong: #1f55a8;
   --chip: #e1ecfb;
 
-  /* Tag chip palette: a tint and a text color per name, all at the same
-     lightness (OKLCH 0.95 and 0.43), so no tag stands out. Every pair is at
-     least 6.3:1. No blue, which stays the accent. Names match tags.color. */
-  --tag-slate: #eaeff4;
-  --tag-slate-text: #45515f;
-  --tag-rose: #ffe6e7;
-  --tag-rose-text: #81313c;
-  --tag-orange: #ffe8da;
-  --tag-orange-text: #7e3a06;
-  --tag-amber: #fbedd5;
-  --tag-amber-text: #6f4700;
-  --tag-green: #ddf6e4;
-  --tag-green-text: #006133;
-  --tag-teal: #d5f7f4;
-  --tag-teal-text: #00625d;
-  --tag-violet: #f2eaff;
-  --tag-violet-text: #5a3f82;
-  --tag-pink: #ffe6f4;
-  --tag-pink-text: #78335d;
+  /* Tag chip palette, from the devTalk mockup: each hue at 25% behind text
+     in the same hue. The mockup's text is the full hue, which is under 4.5:1
+     for most; here it is darkened in OKLCH (same hue) until it reaches 4.6:1
+     on a card. slate is ours, the neutral default. Names match tags.color. */
+  --tag-slate: rgb(100 116 139 / 0.25);
+  --tag-slate-text: #4f5e75;
+  --tag-coral: rgb(222 93 67 / 0.25);
+  --tag-coral-text: #ad2f15;
+  --tag-rust: rgb(158 73 34 / 0.25);
+  --tag-rust-text: #944018;
+  --tag-amber: rgb(217 143 32 / 0.25);
+  --tag-amber-text: #8a5805;
+  --tag-yellow: rgb(196 158 9 / 0.25);
+  --tag-yellow-text: #7a6106;
+  --tag-olive: rgb(158 133 34 / 0.25);
+  --tag-olive-text: #725e00;
+  --tag-brown: rgb(131 92 41 / 0.25);
+  --tag-brown-text: #78521e;
+  --tag-forest: rgb(17 98 25 / 0.25);
+  --tag-forest-text: #116219;
+  --tag-green: rgb(34 158 92 / 0.25);
+  --tag-green-text: #026e3b;
+  --tag-teal: rgb(49 133 150 / 0.25);
+  --tag-teal-text: #006778;
+  --tag-petrol: rgb(16 105 121 / 0.25);
+  --tag-petrol-text: #056271;
+  --tag-blue: rgb(67 129 222 / 0.25);
+  --tag-blue-text: #1e5cb6;
+  --tag-navy: rgb(34 59 158 / 0.25);
+  --tag-navy-text: #223b9e;
+  --tag-indigo: rgb(55 34 158 / 0.25);
+  --tag-indigo-text: #37229e;
+  --tag-purple: rgb(131 34 158 / 0.25);
+  --tag-purple-text: #83229e;
+  --tag-pink: rgb(226 96 148 / 0.25);
+  --tag-pink-text: #ac2d66;
 }
 
 @theme inline {
@@ -55,18 +72,34 @@
   --color-chip: var(--chip);
   --color-tag-slate: var(--tag-slate);
   --color-tag-slate-text: var(--tag-slate-text);
-  --color-tag-rose: var(--tag-rose);
-  --color-tag-rose-text: var(--tag-rose-text);
-  --color-tag-orange: var(--tag-orange);
-  --color-tag-orange-text: var(--tag-orange-text);
+  --color-tag-coral: var(--tag-coral);
+  --color-tag-coral-text: var(--tag-coral-text);
+  --color-tag-rust: var(--tag-rust);
+  --color-tag-rust-text: var(--tag-rust-text);
   --color-tag-amber: var(--tag-amber);
   --color-tag-amber-text: var(--tag-amber-text);
+  --color-tag-yellow: var(--tag-yellow);
+  --color-tag-yellow-text: var(--tag-yellow-text);
+  --color-tag-olive: var(--tag-olive);
+  --color-tag-olive-text: var(--tag-olive-text);
+  --color-tag-brown: var(--tag-brown);
+  --color-tag-brown-text: var(--tag-brown-text);
+  --color-tag-forest: var(--tag-forest);
+  --color-tag-forest-text: var(--tag-forest-text);
   --color-tag-green: var(--tag-green);
   --color-tag-green-text: var(--tag-green-text);
   --color-tag-teal: var(--tag-teal);
   --color-tag-teal-text: var(--tag-teal-text);
-  --color-tag-violet: var(--tag-violet);
-  --color-tag-violet-text: var(--tag-violet-text);
+  --color-tag-petrol: var(--tag-petrol);
+  --color-tag-petrol-text: var(--tag-petrol-text);
+  --color-tag-blue: var(--tag-blue);
+  --color-tag-blue-text: var(--tag-blue-text);
+  --color-tag-navy: var(--tag-navy);
+  --color-tag-navy-text: var(--tag-navy-text);
+  --color-tag-indigo: var(--tag-indigo);
+  --color-tag-indigo-text: var(--tag-indigo-text);
+  --color-tag-purple: var(--tag-purple);
+  --color-tag-purple-text: var(--tag-purple-text);
   --color-tag-pink: var(--tag-pink);
   --color-tag-pink-text: var(--tag-pink-text);
   --font-sans: var(--font-inter);

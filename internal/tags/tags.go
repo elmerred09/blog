@@ -28,7 +28,10 @@ var ErrNotFound = errors.New("tag not found")
 // admin offers them; slate is the default. Keep it in step with
 // tags_color_check and web/lib/tag-colors.ts.
 func Colors() []string {
-	return []string{"slate", "rose", "orange", "amber", "green", "teal", "violet", "pink"}
+	return []string{
+		"slate", "coral", "rust", "amber", "yellow", "olive", "brown", "forest",
+		"green", "teal", "petrol", "blue", "navy", "indigo", "purple", "pink",
+	}
 }
 
 // FromNames turns display names into tags, keeping their order. Names that

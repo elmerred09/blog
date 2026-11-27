@@ -574,9 +574,27 @@ components:
           $ref: "#/components/schemas/TagColor"
 
     TagColor:
-      description: The tag chip's palette color. New tags are slate.
+      description: The tag chip's palette color, from the devTalk mockup's fifteen plus slate. New tags are slate.
       type: string
-      enum: [slate, rose, orange, amber, green, teal, violet, pink]
+      enum:
+        [
+          slate,
+          coral,
+          rust,
+          amber,
+          yellow,
+          olive,
+          brown,
+          forest,
+          green,
+          teal,
+          petrol,
+          blue,
+          navy,
+          indigo,
+          purple,
+          pink,
+        ]
 
     TagColorUpdate:
       type: object

@@ -275,10 +275,10 @@ export interface components {
             color: components["schemas"]["TagColor"];
         };
         /**
-         * @description The tag chip's palette color. New tags are slate.
+         * @description The tag chip's palette color, from the devTalk mockup's fifteen plus slate. New tags are slate.
          * @enum {string}
          */
-        TagColor: "slate" | "rose" | "orange" | "amber" | "green" | "teal" | "violet" | "pink";
+        TagColor: "slate" | "coral" | "rust" | "amber" | "yellow" | "olive" | "brown" | "forest" | "green" | "teal" | "petrol" | "blue" | "navy" | "indigo" | "purple" | "pink";
         TagColorUpdate: {
             /** @description A TagColor. Any other value is a 400 with a problem on color. */
             color: string;

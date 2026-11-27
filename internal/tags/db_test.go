@@ -216,7 +216,7 @@ func TestStoreSetColor(t *testing.T) {
 	}{
 		{name: "palette color", slug: "go", color: "teal", want: tags.Tag{Slug: "go", Name: "go", Color: "teal"}},
 		{name: "back to the default", slug: "go", color: "slate", want: tags.Tag{Slug: "go", Name: "go", Color: "slate"}},
-		{name: "color outside the palette", slug: "go", color: "blue", wantInvalid: true},
+		{name: "color outside the palette", slug: "go", color: "magenta", wantInvalid: true},
 		{name: "empty color", slug: "go", color: "", wantInvalid: true},
 		{name: "unknown tag", slug: "rust", color: "teal", wantErr: tags.ErrNotFound},
 	}

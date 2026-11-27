@@ -6,7 +6,7 @@ describe("tagColors", () => {
   it("lists every palette color once, slate first", () => {
     expect(tagColors[0]).toBe("slate");
     expect(new Set(tagColors).size).toBe(tagColors.length);
-    expect(tagColors).toHaveLength(8);
+    expect(tagColors).toHaveLength(16);
   });
 });
 
@@ -20,6 +20,6 @@ describe("tagChipClasses", () => {
   });
 
   it("falls back to slate for a color this build doesn't know", () => {
-    expect(tagChipClasses("blue" as never)).toBe(tagChipClasses("slate"));
+    expect(tagChipClasses("magenta" as never)).toBe(tagChipClasses("slate"));
   });
 });

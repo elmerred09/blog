@@ -7,24 +7,40 @@ export type TagColor = Tag["color"];
 // names in step with tags.Colors in Go and tags_color_check.
 const chipClasses: Record<TagColor, string> = {
   slate: "bg-tag-slate text-tag-slate-text",
-  rose: "bg-tag-rose text-tag-rose-text",
-  orange: "bg-tag-orange text-tag-orange-text",
+  coral: "bg-tag-coral text-tag-coral-text",
+  rust: "bg-tag-rust text-tag-rust-text",
   amber: "bg-tag-amber text-tag-amber-text",
+  yellow: "bg-tag-yellow text-tag-yellow-text",
+  olive: "bg-tag-olive text-tag-olive-text",
+  brown: "bg-tag-brown text-tag-brown-text",
+  forest: "bg-tag-forest text-tag-forest-text",
   green: "bg-tag-green text-tag-green-text",
   teal: "bg-tag-teal text-tag-teal-text",
-  violet: "bg-tag-violet text-tag-violet-text",
+  petrol: "bg-tag-petrol text-tag-petrol-text",
+  blue: "bg-tag-blue text-tag-blue-text",
+  navy: "bg-tag-navy text-tag-navy-text",
+  indigo: "bg-tag-indigo text-tag-indigo-text",
+  purple: "bg-tag-purple text-tag-purple-text",
   pink: "bg-tag-pink text-tag-pink-text",
 };
 
 // The admin's swatch for each color: the tint, ringed in the text color.
 const swatchClasses: Record<TagColor, string> = {
   slate: "bg-tag-slate border-tag-slate-text",
-  rose: "bg-tag-rose border-tag-rose-text",
-  orange: "bg-tag-orange border-tag-orange-text",
+  coral: "bg-tag-coral border-tag-coral-text",
+  rust: "bg-tag-rust border-tag-rust-text",
   amber: "bg-tag-amber border-tag-amber-text",
+  yellow: "bg-tag-yellow border-tag-yellow-text",
+  olive: "bg-tag-olive border-tag-olive-text",
+  brown: "bg-tag-brown border-tag-brown-text",
+  forest: "bg-tag-forest border-tag-forest-text",
   green: "bg-tag-green border-tag-green-text",
   teal: "bg-tag-teal border-tag-teal-text",
-  violet: "bg-tag-violet border-tag-violet-text",
+  petrol: "bg-tag-petrol border-tag-petrol-text",
+  blue: "bg-tag-blue border-tag-blue-text",
+  navy: "bg-tag-navy border-tag-navy-text",
+  indigo: "bg-tag-indigo border-tag-indigo-text",
+  purple: "bg-tag-purple border-tag-purple-text",
   pink: "bg-tag-pink border-tag-pink-text",
 };
 

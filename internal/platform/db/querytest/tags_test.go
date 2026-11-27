@@ -117,10 +117,10 @@ func TestUpdateTagColor(t *testing.T) {
 		t.Errorf("UpdateTagColor(unknown slug) err = %v, want pgx.ErrNoRows", err)
 	}
 
-	_, err = q.UpdateTagColor(ctx, db.UpdateTagColorParams{Slug: "go", Color: "blue"})
+	_, err = q.UpdateTagColor(ctx, db.UpdateTagColorParams{Slug: "go", Color: "magenta"})
 	var pgErr *pgconn.PgError
 	if !errors.As(err, &pgErr) || pgErr.Code != "23514" || pgErr.ConstraintName != "tags_color_check" {
-		t.Errorf("UpdateTagColor(blue) err = %v, want check_violation on tags_color_check", err)
+		t.Errorf("UpdateTagColor(magenta) err = %v, want check_violation on tags_color_check", err)
 	}
 }
 
