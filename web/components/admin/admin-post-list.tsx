@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { DeletePostButton } from "@/components/admin/delete-post-button";
 import { LocalTime } from "@/components/admin/local-time";
 import type { AdminPostListItem } from "@/lib/api/types";
 
@@ -98,15 +99,11 @@ export function AdminPostList({ posts }: Props) {
                     >
                       <PencilIcon />
                     </Link>
-                    <button
-                      type="button"
-                      aria-label={`Delete ${post.title}`}
-                      aria-disabled="true"
-                      title="Delete isn't available yet"
-                      className={`${iconButton} cursor-not-allowed`}
-                    >
-                      <TrashIcon />
-                    </button>
+                    <DeletePostButton
+                      post={post}
+                      variant="icon"
+                      after="refresh"
+                    />
                   </div>
                 </td>
               </tr>
@@ -132,25 +129,6 @@ function PencilIcon() {
     >
       <path d="M4 20h4L18.5 9.5a2.12 2.12 0 0 0-3-3L5 17v3Z" />
       <path d="m13.5 6.5 3 3" />
-    </svg>
-  );
-}
-
-function TrashIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      className="size-4"
-    >
-      <path d="M4 7h16M10 11v6M14 11v6" />
-      <path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12" />
-      <path d="M9 7V4h6v3" />
     </svg>
   );
 }

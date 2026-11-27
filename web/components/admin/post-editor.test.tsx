@@ -18,6 +18,7 @@ vi.mock("@/app/admin/actions", () => ({
   savePost: vi.fn(),
   previewPost: vi.fn(),
   createImageUpload: vi.fn(),
+  deletePost: vi.fn(),
 }));
 // The real editor is covered by editor.test.tsx; a textarea stands in here.
 vi.mock("@/components/admin/editor", () => ({
@@ -295,5 +296,16 @@ describe("PostEditor, existing post", () => {
     expect(previewPost).toHaveBeenCalledExactlyOnceWith("Changed.");
     await waitFor(() => expect(screen.getByText("Changed.")).toBeDefined());
     expect(createImageUpload).not.toHaveBeenCalled();
+  });
+});
+
+describe("PostEditor, delete", () => {
+  it("offers Delete post only once the post exists", () => {
+    const { unmount } = render(<PostEditor post={null} tagSuggestions={[]} />);
+    expect(screen.queryByRole("button", { name: "Delete post" })).toBeNull();
+    unmount();
+
+    render(<PostEditor post={post} tagSuggestions={[]} />);
+    expect(screen.getByRole("button", { name: "Delete post" })).toBeDefined();
   });
 });

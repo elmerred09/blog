@@ -11,6 +11,7 @@ import {
 } from "react";
 
 import { createImageUpload, previewPost, savePost } from "@/app/admin/actions";
+import { DeletePostButton } from "@/components/admin/delete-post-button";
 import { Editor } from "@/components/admin/editor";
 import { PublishControls } from "@/components/admin/publish-controls";
 import { TagInput } from "@/components/admin/tag-input";
@@ -364,6 +365,19 @@ function PostForm({
           <p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">
             {status}
           </p>
+        )}
+        {saved && (
+          <div className="ml-auto">
+            <DeletePostButton
+              post={{
+                id: saved.id,
+                slug: saved.slug,
+                title: title || saved.slug,
+              }}
+              variant="text"
+              after="list"
+            />
+          </div>
         )}
       </div>
     </form>
