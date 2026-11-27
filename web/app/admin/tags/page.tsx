@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
+import { BackLink } from "@/components/admin/back-link";
 import { TagColorList } from "@/components/admin/tag-color-list";
 import { AdminTagListSkeleton } from "@/components/skeleton";
 import { requireAdmin } from "@/lib/admin/session";
@@ -8,19 +9,17 @@ import { listAdminTags } from "@/lib/api/admin";
 
 export const metadata: Metadata = { title: "Tags" };
 
+// Laid out like the editor pages: a Back link to the post list over the
+// title, in the same column.
 export default function AdminTagsPage() {
   return (
-    <>
-      <header className="mb-8 space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Tags</h1>
-        <p className="text-sm text-muted">
-          Each tag&apos;s chip color on post cards and post pages.
-        </p>
-      </header>
+    <div className="mx-auto max-w-3xl">
+      <BackLink />
+      <h1 className="mb-6 text-3xl font-bold tracking-tight">Tags</h1>
       <Suspense fallback={<AdminTagListSkeleton />}>
         <AdminTags />
       </Suspense>
-    </>
+    </div>
   );
 }
 
