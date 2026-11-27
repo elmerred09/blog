@@ -15,8 +15,10 @@ type Props = {
   children: ReactNode;
 };
 
-// The post card shared by the home list and the search results. The title link
-// stretches over the whole card; the tags sit above it (see TagList).
+// The post card shared by the home list, the tag pages and the search results.
+// The title link stretches over the whole card; the tags sit above it (see
+// TagList). The card fills its list item's height, with the tags at the
+// bottom, so cards side by side in a grid row line up.
 export function PostCard({
   slug,
   title,
@@ -26,7 +28,7 @@ export function PostCard({
   children,
 }: Props) {
   return (
-    <article className="group relative overflow-hidden rounded-2xl border border-line bg-card transition-colors hover:border-line-strong">
+    <article className="group relative flex w-full flex-col overflow-hidden rounded-2xl border border-line bg-card transition-colors hover:border-line-strong">
       <div className="border-b border-line px-6 py-4">
         <PostDateline
           publishedAt={publishedAt}
@@ -42,7 +44,7 @@ export function PostCard({
           </Link>
         </h2>
       </div>
-      <div className="space-y-4 px-6 py-5">
+      <div className="flex-1 space-y-4 px-6 py-5">
         {children}
         <span
           aria-hidden="true"

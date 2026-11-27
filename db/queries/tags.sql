@@ -59,8 +59,19 @@ HAVING NOT sqlc.arg(published_only)::boolean OR count(p.id) > 0
 ORDER BY t.slug ASC;
 
 -- name: ListPostsByTag :many
--- index: posts_pagination_idx (published_at DESC, id DESC) WHERE published_at IS NOT NULL AND deleted_at IS NULL.
-SELECT p.id, p.slug, p.title, p.published_at
+-- The plan depends on how many posts carry the tag. Checked on the skewed seed
+-- (db/seed/posts-tags.sql):
+-- * Common tag: walks posts_pagination_idx (published_at DESC, id DESC) WHERE
+--   published_at IS NOT NULL AND deleted_at IS NULL from the cursor, and probes
+--   post_tags_pkey (post_id, tag_id) per post until the page fills (13 probes
+--   for 11 rows, 0.1ms).
+-- * Rare tag: reads all of its rows from post_tags_tag_id_idx (tag_id, post_id),
+--   fetches each post by posts_pkey, then a top-N sort (100 posts, 0.2ms).
+-- A generic plan (PREPARE with plan_cache_mode = force_generic_plan) can't see
+-- the tag, so it always takes the walk: for a rare tag whose posts are all
+-- old, that visits about 9100 posts to fill page 1 (23ms on 10k posts, growing
+-- with the table). See the PR for the follow-up.
+SELECT p.id, p.slug, p.title, p.summary, p.published_at, p.word_count
 FROM posts p
 JOIN post_tags pt ON p.id = pt.post_id
 WHERE pt.tag_id = sqlc.arg(tag_id)
@@ -71,4 +82,23 @@ WHERE pt.tag_id = sqlc.arg(tag_id)
     COALESCE(sqlc.narg(after_id)::uuid, 'ffffffff-ffff-ffff-ffff-ffffffffffff')
   )
 ORDER BY p.published_at DESC, p.id DESC
+LIMIT sqlc.arg(page_size);
+
+-- name: ListPostsByTagBefore :many
+-- The reverse of ListPostsByTag, with the same two plans: a common tag walks
+-- posts_pagination_idx backward (ASC is the reverse of the index order) and
+-- probes post_tags_pkey; a rare tag reads post_tags_tag_id_idx and sorts.
+-- A backward page always has a cursor, so the comparison needs no NULL sentinel.
+-- The caller reverses the rows.
+SELECT p.id, p.slug, p.title, p.summary, p.published_at, p.word_count
+FROM posts p
+JOIN post_tags pt ON p.id = pt.post_id
+WHERE pt.tag_id = sqlc.arg(tag_id)
+  AND p.published_at <= CURRENT_TIMESTAMP
+  AND p.deleted_at IS NULL
+  AND (p.published_at, p.id) > (
+    sqlc.arg(before_published_at)::timestamptz,
+    sqlc.arg(before_id)::uuid
+  )
+ORDER BY p.published_at ASC, p.id ASC
 LIMIT sqlc.arg(page_size);

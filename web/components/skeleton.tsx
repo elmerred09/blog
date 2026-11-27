@@ -11,6 +11,7 @@ function Shimmer() {
 }
 
 const topicChipWidths = ["w-20", "w-16", "w-24", "w-14", "w-28"];
+const topicNavChipWidths = ["w-28", "w-24", "w-36", "w-32", "w-40"];
 
 // Stand-in for TopicList. The heading is real: it does not come from the API.
 export function TopicListSkeleton() {
@@ -39,20 +40,42 @@ export function TopicListSkeleton() {
   );
 }
 
+// Stand-in for TopicNav: a row of chips, no text.
+export function TopicNavSkeleton() {
+  return (
+    <div aria-hidden="true" className="relative overflow-hidden">
+      <ul className="flex flex-wrap gap-1">
+        {topicNavChipWidths.map((width) => (
+          <li key={width}>
+            <div className={`h-20 rounded-2xl bg-line ${width}`} />
+          </li>
+        ))}
+      </ul>
+      <Shimmer />
+    </div>
+  );
+}
+
 const postCards = [
   { title: "w-2/3", summary: "w-4/5" },
   { title: "w-1/2", summary: "w-3/5" },
   { title: "w-3/4", summary: "w-5/6" },
 ];
 
-// Stand-in for the home post list: the same card bands, with no text.
-export function PostListSkeleton() {
+// Stand-in for a post list: the same card bands, with no text. columns
+// matches PostList's.
+export function PostListSkeleton({ columns = 1 }: { columns?: 1 | 2 }) {
   return (
     <div aria-busy="true">
       <p className="sr-only" role="status">
         Loading posts…
       </p>
-      <ul aria-hidden="true" className="space-y-5">
+      <ul
+        aria-hidden="true"
+        className={
+          columns === 2 ? "grid gap-5 md:grid-cols-2" : "flex flex-col gap-5"
+        }
+      >
         {postCards.map((card) => (
           <li key={card.title}>
             <article className="relative overflow-hidden rounded-2xl border border-line bg-card">
@@ -77,6 +100,32 @@ export function PostListSkeleton() {
         ))}
       </ul>
     </div>
+  );
+}
+
+// Stand-in for the tag page's heading. The "Topic" label is real; the
+// tag's name comes from the API.
+// The devTalk topic page heading: "Topics * <name>" on one 48px line. Shared
+// with the tag page so the skeleton and the real heading line up.
+export const tagHeadingClass =
+  "flex flex-wrap gap-x-2 text-5xl leading-[1.1] font-semibold tracking-[-2px]";
+
+// Stand-in for the tag page heading. "Topics *" is real: only the name
+// comes from the API.
+export function TagHeadingSkeleton() {
+  return (
+    <header className="mb-20">
+      <div className={tagHeadingClass}>
+        <span>Topics</span>
+        <span aria-hidden="true">*</span>
+        <div
+          aria-hidden="true"
+          className="relative h-[1.1em] w-64 overflow-hidden rounded-sm bg-line"
+        >
+          <Shimmer />
+        </div>
+      </div>
+    </header>
   );
 }
 

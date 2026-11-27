@@ -2,6 +2,7 @@ package post_test
 
 import (
 	"errors"
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -525,5 +526,137 @@ func setPostTimes(t *testing.T, pool *pgxpool.Pool, id uuid.UUID, published, upd
 		id, published, updated)
 	if err != nil {
 		t.Fatalf("set times: %v", err)
+	}
+}
+
+// walkTag lists a tag's pages from start, following Next (dir After) or Prev
+// (dir Before) until that direction runs out.
+func walkTag(t *testing.T, svc *post.Service, tag string, start *post.Cursor, dir post.Direction, limit int) []post.Page {
+	t.Helper()
+
+	cursor := start
+	var pages []post.Page
+	for range 100 {
+		tp, err := svc.ListByTag(t.Context(), tag, post.ListParams{Cursor: cursor, Limit: limit})
+		if err != nil {
+			t.Fatalf("ListByTag(%q): %v", tag, err)
+		}
+		if tp.Tag.Slug != tag {
+			t.Fatalf("ListByTag(%q) tag = %+v", tag, tp.Tag)
+		}
+		pages = append(pages, tp.Page)
+		if dir == post.Before {
+			cursor = tp.Prev
+		} else {
+			cursor = tp.Next
+		}
+		if cursor == nil {
+			return pages
+		}
+	}
+	t.Fatal("still paginating after 100 pages")
+	return nil
+}
+
+func TestListByTag(t *testing.T) {
+	t.Parallel()
+	pool, _ := env.NewDB(t)
+	svc := post.NewService(pool)
+
+	const limit = 10
+	now := dbtest.Now(t, pool).Truncate(time.Microsecond)
+	var tagged []dbtest.Post
+	for i := 1; i <= 23; i++ {
+		at := now.Add(-time.Duration(i) * time.Hour)
+		if i >= 9 && i <= 13 {
+			at = now.Add(-9 * time.Hour) // a tie across the page 1/2 boundary
+		}
+		opts := []dbtest.PostOption{dbtest.PublishedAt(at), dbtest.WithTags("go")}
+		if i == 1 {
+			opts = append(opts, dbtest.WithTags("postgres"))
+		}
+		tagged = append(tagged, dbtest.InsertPost(t, pool, opts...))
+	}
+	// Newer than every go post, but tagged otherwise or not listable.
+	dbtest.InsertPost(t, pool, dbtest.PublishedAgo(time.Minute), dbtest.WithTags("other"))
+	dbtest.InsertPost(t, pool, dbtest.PublishedAgo(time.Minute))
+	dbtest.InsertPost(t, pool, dbtest.Draft(), dbtest.WithTags("go", "secret"))
+	dbtest.InsertPost(t, pool, dbtest.ScheduledIn(time.Hour), dbtest.WithTags("go", "secret"))
+	dbtest.InsertPost(t, pool, dbtest.Deleted(), dbtest.WithTags("go", "secret"))
+	dbtest.InsertTag(t, pool, "unused")
+
+	t.Run("pages forward through exactly the tag's published posts", func(t *testing.T) {
+		pages := walkTag(t, svc, "go", nil, post.After, limit)
+		var got []string
+		for _, p := range pages {
+			got = append(got, itemSlugs(p.Items)...)
+		}
+		if want := dbtest.Slugs(dbtest.NewestFirst(tagged)); !slices.Equal(got, want) {
+			t.Errorf("slugs across pages:\n got %v\nwant %v", got, want)
+		}
+		if len(pages) != 3 {
+			t.Errorf("pages = %d, want 3", len(pages))
+		}
+		if pages[0].Prev != nil {
+			t.Errorf("first page Prev = %v, want nil", pages[0].Prev)
+		}
+		first := pages[0].Items[0]
+		if first.Slug != tagged[0].Slug || len(first.Tags) != 2 {
+			t.Errorf("first item = %s with tags %v, want %s with go and postgres", first.Slug, first.Tags, tagged[0].Slug)
+		}
+	})
+
+	t.Run("backward visits the same pages", func(t *testing.T) {
+		forward := walkTag(t, svc, "go", nil, post.After, limit)
+		back := walkTag(t, svc, "go", forward[len(forward)-1].Prev, post.Before, limit)
+		want := slices.Clone(forward[:len(forward)-1])
+		slices.Reverse(want)
+		if got, wantSlugs := pageSlugs(back), pageSlugs(want); !sameSlugPages(got, wantSlugs) {
+			t.Errorf("backward pages:\n got %v\nwant %v", got, wantSlugs)
+		}
+	})
+
+	t.Run("a backward fetch at the top is the first page", func(t *testing.T) {
+		forward := walkTag(t, svc, "go", nil, post.After, limit)
+		tp, err := svc.ListByTag(t.Context(), "go", post.ListParams{Cursor: forward[1].Prev, Limit: limit})
+		if err != nil {
+			t.Fatalf("ListByTag: %v", err)
+		}
+		if tp.Prev != nil {
+			t.Errorf("Prev = %v, want nil", tp.Prev)
+		}
+		if got, want := itemSlugs(tp.Items), itemSlugs(forward[0].Items); !slices.Equal(got, want) {
+			t.Errorf("top page = %v, want the first page %v", got, want)
+		}
+	})
+
+	oldest := dbtest.NewestFirst(tagged)[len(tagged)-1]
+	pastEnd := &post.Cursor{Direction: post.After, PublishedAt: *oldest.PublishedAt, ID: oldest.ID}
+	notFound := []struct {
+		name   string
+		tag    string
+		cursor *post.Cursor
+	}{
+		{"unknown tag", "no-such-tag", nil},
+		{"tag without posts", "unused", nil},
+		{"tag only on drafts, scheduled and deleted posts", "secret", nil},
+		{"cursor past the end", "go", pastEnd},
+	}
+	for _, tc := range notFound {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := svc.ListByTag(t.Context(), tc.tag, post.ListParams{Cursor: tc.cursor, Limit: limit})
+			if !errors.Is(err, post.ErrNotFound) {
+				t.Errorf("ListByTag(%q) error = %v, want ErrNotFound", tc.tag, err)
+			}
+		})
+	}
+
+	for _, n := range []int{0, post.MaxLimit + 1} {
+		t.Run(fmt.Sprintf("limit %d", n), func(t *testing.T) {
+			_, err := svc.ListByTag(t.Context(), "go", post.ListParams{Limit: n})
+			if !errors.Is(err, post.ErrInvalidLimit) {
+				t.Errorf("error = %v, want ErrInvalidLimit", err)
+			}
+		})
 	}
 }

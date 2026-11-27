@@ -97,6 +97,7 @@ func newEngine(d Deps) *gin.Engine {
 	v1.GET("/sitemap", getSitemap(d.Posts))
 	v1.GET("/search", searchPosts(d.Search))
 	v1.GET("/tags", listTags(d.Tags, tags.Published))
+	v1.GET("/tags/:slug/posts", listPostsByTag(d.Posts))
 
 	if d.Admin != nil {
 		g := v1.Group("/admin", requireAdmin(d.Admin.Verifier), limitBody(maxJSONBody))

@@ -6,7 +6,9 @@ import {
   PostEditorSkeleton,
   PostListSkeleton,
   PostSkeleton,
+  TagHeadingSkeleton,
   TopicListSkeleton,
+  TopicNavSkeleton,
 } from "@/components/skeleton";
 
 describe("TopicListSkeleton", () => {
@@ -59,5 +61,25 @@ describe("PostEditorSkeleton", () => {
     expect(screen.getByText("Title")).toBeTruthy();
     expect(screen.getByText("Publishing")).toBeTruthy();
     expect(screen.queryByRole("textbox")).toBeNull();
+  });
+});
+
+describe("TagHeadingSkeleton", () => {
+  it("keeps the label and hides the placeholder name", () => {
+    const { container } = render(<TagHeadingSkeleton />);
+
+    expect(screen.getByText("Topics")).toBeTruthy();
+    expect(screen.queryByRole("heading")).toBeNull();
+    expect(container.querySelector('[aria-hidden="true"]')).toBeTruthy();
+  });
+});
+
+describe("TopicNavSkeleton", () => {
+  it("is hidden from assistive tech", () => {
+    const { container } = render(<TopicNavSkeleton />);
+
+    expect(container.firstElementChild?.getAttribute("aria-hidden")).toBe(
+      "true",
+    );
   });
 });

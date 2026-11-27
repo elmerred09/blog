@@ -237,3 +237,70 @@ for (const { name, path } of notFoundCases) {
     await expect(page.getByRole("article")).toHaveCount(0);
   });
 }
+
+test("a topic opens its tag page, which pages through the tag's posts", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page
+    .getByRole("region", { name: "Dive in by topic" })
+    .getByRole("link", { name: FIXTURE_TAG })
+    .click();
+
+  await expect(page).toHaveURL(/\/tags\/e2e-fixtures$/);
+  await expect(
+    page.getByRole("heading", { level: 1, name: FIXTURE_TAG }),
+  ).toBeVisible();
+  await expect(page).toHaveTitle(`${FIXTURE_TAG} | Bits by Elmer`);
+  const topics = page.getByRole("navigation", { name: "Topics" });
+  await expect(
+    topics.getByRole("link", { name: FIXTURE_TAG, exact: true }),
+  ).toHaveAttribute("aria-current", "page");
+  await expect(
+    topics.getByRole("link", { name: "Go", exact: true }),
+  ).toHaveAttribute("href", "/tags/go");
+
+  const titles = await listedTitles(page);
+  let pages = 1;
+  const older = page.getByRole("link", { name: "Older posts" });
+  while ((await older.count()) > 0) {
+    expect(pages, "too many pages; is the cursor advancing?").toBeLessThan(
+      MAX_PAGES,
+    );
+    await older.click();
+    await expect(page).toHaveURL(/\/tags\/e2e-fixtures\?cursor=/);
+    titles.push(...(await listedTitles(page)));
+    pages++;
+  }
+
+  expect(pages).toBeGreaterThan(1);
+  const fixtureTitles = PUBLISHED_FIXTURES.map((post) => post.title);
+  expect(titles.filter((title) => fixtureTitles.includes(title))).toEqual(
+    fixtureTitles,
+  );
+  expect(titles).not.toContain(DRAFT_POST.title);
+  expect(titles).not.toContain(SCHEDULED_POST.title);
+});
+
+test("a post's tag opens that tag's page", async ({ page }) => {
+  await page.goto(`/posts/${CODE_POST.slug}`);
+  await page
+    .getByRole("list", { name: "Tags" })
+    .getByRole("link", { name: "Go" })
+    .click();
+
+  await expect(page).toHaveURL(/\/tags\/go$/);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Go" }),
+  ).toBeVisible();
+  expect(await listedTitles(page)).toContain(CODE_POST.title);
+  expect(await listedTitles(page)).not.toContain(SEARCH_POST.title);
+});
+
+test("an unknown tag is not found", async ({ page }) => {
+  await page.goto("/tags/no-such-tag");
+
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Not found" }),
+  ).toBeVisible();
+});

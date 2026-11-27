@@ -55,26 +55,51 @@ func toListItemJSON(it post.ListItem) listItemJSON {
 
 var invalidLimitMessage = fmt.Sprintf("limit must be an integer from 1 to %d", post.MaxLimit)
 
+// listParams reads ?limit= and ?cursor=. On a bad value it writes the 400 and
+// returns false.
+func listParams(c *gin.Context) (post.ListParams, bool) {
+	params := post.ListParams{Limit: post.DefaultLimit}
+	if raw, ok := c.GetQuery("limit"); ok {
+		n, err := strconv.Atoi(raw)
+		if err != nil {
+			writeError(c, http.StatusBadRequest, codeInvalidRequest, invalidLimitMessage)
+			return post.ListParams{}, false
+		}
+		params.Limit = n
+	}
+	if raw, ok := c.GetQuery("cursor"); ok {
+		cursor, err := post.ParseCursor(raw)
+		if err != nil {
+			writeError(c, http.StatusBadRequest, codeInvalidRequest, "invalid cursor")
+			return post.ListParams{}, false
+		}
+		params.Cursor = &cursor
+	}
+	return params, true
+}
+
+func toPageJSON(page post.Page) pageJSON {
+	resp := pageJSON{Items: make([]listItemJSON, len(page.Items))}
+	for i, it := range page.Items {
+		resp.Items[i] = toListItemJSON(it)
+	}
+	if page.Next != nil {
+		next := page.Next.String()
+		resp.NextCursor = &next
+	}
+	if page.Prev != nil {
+		prev := page.Prev.String()
+		resp.PrevCursor = &prev
+	}
+	return resp
+}
+
 func listPosts(posts *post.Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		params := post.ListParams{Limit: post.DefaultLimit}
-		if raw, ok := c.GetQuery("limit"); ok {
-			n, err := strconv.Atoi(raw)
-			if err != nil {
-				writeError(c, http.StatusBadRequest, codeInvalidRequest, invalidLimitMessage)
-				return
-			}
-			params.Limit = n
+		params, ok := listParams(c)
+		if !ok {
+			return
 		}
-		if raw, ok := c.GetQuery("cursor"); ok {
-			cursor, err := post.ParseCursor(raw)
-			if err != nil {
-				writeError(c, http.StatusBadRequest, codeInvalidRequest, "invalid cursor")
-				return
-			}
-			params.Cursor = &cursor
-		}
-
 		page, err := posts.List(c.Request.Context(), params)
 		if errors.Is(err, post.ErrInvalidLimit) {
 			writeError(c, http.StatusBadRequest, codeInvalidRequest, invalidLimitMessage)
@@ -84,20 +109,35 @@ func listPosts(posts *post.Service) gin.HandlerFunc {
 			internalError(c, err)
 			return
 		}
+		c.JSON(http.StatusOK, toPageJSON(page))
+	}
+}
 
-		resp := pageJSON{Items: make([]listItemJSON, len(page.Items))}
-		for i, it := range page.Items {
-			resp.Items[i] = toListItemJSON(it)
+type tagPageJSON struct {
+	Tag tagJSON `json:"tag"`
+	pageJSON
+}
+
+func listPostsByTag(posts *post.Service) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		params, ok := listParams(c)
+		if !ok {
+			return
 		}
-		if page.Next != nil {
-			next := page.Next.String()
-			resp.NextCursor = &next
+		tp, err := posts.ListByTag(c.Request.Context(), c.Param("slug"), params)
+		if errors.Is(err, post.ErrInvalidLimit) {
+			writeError(c, http.StatusBadRequest, codeInvalidRequest, invalidLimitMessage)
+			return
 		}
-		if page.Prev != nil {
-			prev := page.Prev.String()
-			resp.PrevCursor = &prev
+		if errors.Is(err, post.ErrNotFound) {
+			writeError(c, http.StatusNotFound, codeNotFound, "no published posts with this tag")
+			return
 		}
-		c.JSON(http.StatusOK, resp)
+		if err != nil {
+			internalError(c, err)
+			return
+		}
+		c.JSON(http.StatusOK, tagPageJSON{Tag: tagJSON(tp.Tag), pageJSON: toPageJSON(tp.Page)})
 	}
 }
 

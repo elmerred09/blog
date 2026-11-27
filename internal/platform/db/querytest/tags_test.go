@@ -346,6 +346,47 @@ func TestListPostsByTag(t *testing.T) {
 		}
 	})
 
+	t.Run("paging backward returns the newer posts, oldest first", func(t *testing.T) {
+		newestFirst := dbtest.NewestFirst(tagged)
+		// The 10 posts just newer than the 15th, a range that ends with the
+		// five-post tie group, so its order depends on the id tiebreak.
+		cursor := newestFirst[14]
+		rows, err := q.ListPostsByTagBefore(t.Context(), db.ListPostsByTagBeforeParams{
+			TagID:             goID,
+			BeforePublishedAt: *cursor.PublishedAt,
+			BeforeID:          cursor.ID,
+			PageSize:          10,
+		})
+		if err != nil {
+			t.Fatalf("ListPostsByTagBefore: %v", err)
+		}
+		got := make([]uuid.UUID, len(rows))
+		for i, r := range rows {
+			got[i] = r.ID
+		}
+		want := dbtest.IDs(newestFirst[4:14])
+		slices.Reverse(want)
+		if !slices.Equal(got, want) {
+			t.Errorf("rows before post 15:\n got %v\nwant %v", got, want)
+		}
+	})
+
+	t.Run("paging backward from the newest post returns nothing", func(t *testing.T) {
+		newest := dbtest.NewestFirst(tagged)[0]
+		rows, err := q.ListPostsByTagBefore(t.Context(), db.ListPostsByTagBeforeParams{
+			TagID:             goID,
+			BeforePublishedAt: *newest.PublishedAt,
+			BeforeID:          newest.ID,
+			PageSize:          10,
+		})
+		if err != nil {
+			t.Fatalf("ListPostsByTagBefore: %v", err)
+		}
+		if len(rows) != 0 {
+			t.Errorf("got %d rows, want 0", len(rows))
+		}
+	})
+
 	t.Run("a post with several tags appears under each", func(t *testing.T) {
 		got, _ := collectPages(t, 10, listPostsByTagPages(t, q, postgresID, 10))
 		if !slices.Contains(ids(got), both.ID) {

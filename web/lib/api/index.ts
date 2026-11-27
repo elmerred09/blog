@@ -7,7 +7,7 @@ export {
 } from "./posts";
 export { listSitemapEntries } from "./sitemap";
 export { searchPosts, type SearchPostsParams } from "./search";
-export { listTags } from "./tags";
+export { listPostsByTag, listTags, type ListPostsByTagParams } from "./tags";
 export type {
   AdjacentPosts,
   ErrorCode,
@@ -20,4 +20,5 @@ export type {
   SitemapPage,
   SnippetFragment,
   Tag,
+  TagPage,
 } from "./types";
