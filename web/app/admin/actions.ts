@@ -3,10 +3,12 @@
 import { updateTag } from "next/cache";
 
 import {
+  parseDeletePostInput,
   parsePreviewInput,
   parseSavePostInput,
   parseTagColorInput,
   parseUploadInput,
+  type DeletePostInput,
   type SavePostInput,
   type TagColorInput,
 } from "@/lib/admin/input";
@@ -15,7 +17,7 @@ import * as api from "@/lib/api/admin";
 import type { Outcome } from "@/lib/api/admin";
 import type { AdminPost, Tag, Upload, UploadInput } from "@/lib/api/types";
 
-export type { SavePostInput, TagColorInput };
+export type { DeletePostInput, SavePostInput, TagColorInput };
 
 // Each action checks the session itself: an action is reachable by POST from
 // anywhere, whatever page it was rendered on.
@@ -68,6 +70,21 @@ export async function setTagColor(input: TagColorInput): Promise<Outcome<Tag>> {
   const result = await api.setTagColor(admin, slug, color);
   if (result.ok) {
     updateTag("posts");
+  }
+  return result;
+}
+
+// deletePost soft-deletes a post and expires the cached lists (search and
+// the sitemap share the posts tag) and the post's page, so it 404s at once.
+export async function deletePost(
+  input: DeletePostInput,
+): Promise<Outcome<void>> {
+  const admin = await requireAdmin();
+  const { id, slug } = parseDeletePostInput(input);
+  const result = await api.deleteAdminPost(admin, id);
+  if (result.ok) {
+    updateTag("posts");
+    updateTag(`post:${slug}`);
   }
   return result;
 }

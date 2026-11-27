@@ -8,6 +8,7 @@ import type { AdminPost, AdminPostInput } from "@/lib/api/types";
 
 import {
   createImageUpload,
+  deletePost,
   previewPost,
   savePost,
   setTagColor,
@@ -23,6 +24,7 @@ vi.mock("@/lib/api/admin", () => ({
   previewPost: vi.fn(),
   createImageUpload: vi.fn(),
   setTagColor: vi.fn(),
+  deleteAdminPost: vi.fn(),
 }));
 
 const admin: Admin = { githubId: "123", name: "Elmer" };
@@ -298,6 +300,52 @@ describe("setTagColor", () => {
     async (input) => {
       await expect(setTagColor(input as never)).rejects.toThrow(
         "invalid tag color",
+      );
+    },
+  );
+});
+
+describe("deletePost", () => {
+  it("deletes the post and expires the lists and its page", async () => {
+    vi.mocked(api.deleteAdminPost).mockResolvedValue({
+      ok: true,
+      value: undefined,
+    });
+
+    const result = await deletePost({ id: ID, slug: "keyset-pagination" });
+
+    expect(result.ok).toBe(true);
+    expect(api.deleteAdminPost).toHaveBeenCalledWith(admin, ID);
+    expect(tags()).toEqual(["posts", "post:keyset-pagination"]);
+  });
+
+  it("returns a failure without expiring anything", async () => {
+    const failure = {
+      ok: false as const,
+      error: { code: "not_found" as const, message: "no", problems: [] },
+    };
+    vi.mocked(api.deleteAdminPost).mockResolvedValue(failure);
+
+    await expect(
+      deletePost({ id: ID, slug: "keyset-pagination" }),
+    ).resolves.toEqual(failure);
+    expect(tags()).toEqual([]);
+  });
+
+  it("requires an admin", async () => {
+    signedOut();
+
+    await expect(deletePost({ id: ID, slug: "x" })).rejects.toThrow(
+      "NEXT_REDIRECT",
+    );
+    expect(api.deleteAdminPost).not.toHaveBeenCalled();
+  });
+
+  it.each([null, ID, { id: ID }, { id: 1, slug: "x" }])(
+    "rejects a malformed call %j",
+    async (input) => {
+      await expect(deletePost(input as never)).rejects.toThrow(
+        "invalid delete",
       );
     },
   );
