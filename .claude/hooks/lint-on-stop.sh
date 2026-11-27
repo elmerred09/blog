@@ -12,6 +12,11 @@ printf '%s' "$input" | grep -Eq '"stop_hook_active"[[:space:]]*:[[:space:]]*true
 cd "${CLAUDE_PROJECT_DIR:-.}" || exit 0
 [ -f go.mod ] || exit 0
 
+# Skip the lint when nothing Go-related differs from HEAD (staged, unstaged or
+# untracked), such as after a turn that only answered a question or touched
+# web/. Committed Go changes were already linted by the pre-commit hook.
+[ -n "$(git status --porcelain -- '*.go' go.mod go.sum .golangci.yml 2>/dev/null)" ] || exit 0
+
 log=$(mktemp)
 trap 'rm -f "$log"' EXIT
 
