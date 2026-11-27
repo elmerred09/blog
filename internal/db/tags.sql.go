@@ -69,7 +69,7 @@ func (q *Queries) GetTagsBySlugs(ctx context.Context, slugs []string) ([]GetTags
 }
 
 const listPostsByTag = `-- name: ListPostsByTag :many
-SELECT p.id, p.slug, p.title, p.published_at
+SELECT p.id, p.slug, p.title, p.summary, p.published_at, p.word_count
 FROM posts p
 JOIN post_tags pt ON p.id = pt.post_id
 WHERE pt.tag_id = $1
@@ -94,10 +94,24 @@ type ListPostsByTagRow struct {
 	ID          uuid.UUID
 	Slug        string
 	Title       string
+	Summary     string
 	PublishedAt *time.Time
+	WordCount   int32
 }
 
-// index: posts_pagination_idx (published_at DESC, id DESC) WHERE published_at IS NOT NULL AND deleted_at IS NULL.
+// The plan depends on how many posts carry the tag. Checked on the skewed seed
+// (db/seed/posts-tags.sql):
+//   - Common tag: walks posts_pagination_idx (published_at DESC, id DESC) WHERE
+//     published_at IS NOT NULL AND deleted_at IS NULL from the cursor, and probes
+//     post_tags_pkey (post_id, tag_id) per post until the page fills (13 probes
+//     for 11 rows, 0.1ms).
+//   - Rare tag: reads all of its rows from post_tags_tag_id_idx (tag_id, post_id),
+//     fetches each post by posts_pkey, then a top-N sort (100 posts, 0.2ms).
+//
+// A generic plan (PREPARE with plan_cache_mode = force_generic_plan) can't see
+// the tag, so it always takes the walk: for a rare tag whose posts are all
+// old, that visits about 9100 posts to fill page 1 (23ms on 10k posts, growing
+// with the table). See the PR for the follow-up.
 func (q *Queries) ListPostsByTag(ctx context.Context, arg ListPostsByTagParams) ([]ListPostsByTagRow, error) {
 	rows, err := q.db.Query(ctx, listPostsByTag,
 		arg.TagID,
@@ -116,7 +130,77 @@ func (q *Queries) ListPostsByTag(ctx context.Context, arg ListPostsByTagParams) 
 			&i.ID,
 			&i.Slug,
 			&i.Title,
+			&i.Summary,
 			&i.PublishedAt,
+			&i.WordCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPostsByTagBefore = `-- name: ListPostsByTagBefore :many
+SELECT p.id, p.slug, p.title, p.summary, p.published_at, p.word_count
+FROM posts p
+JOIN post_tags pt ON p.id = pt.post_id
+WHERE pt.tag_id = $1
+  AND p.published_at <= CURRENT_TIMESTAMP
+  AND p.deleted_at IS NULL
+  AND (p.published_at, p.id) > (
+    $2::timestamptz,
+    $3::uuid
+  )
+ORDER BY p.published_at ASC, p.id ASC
+LIMIT $4
+`
+
+type ListPostsByTagBeforeParams struct {
+	TagID             int32
+	BeforePublishedAt time.Time
+	BeforeID          uuid.UUID
+	PageSize          int32
+}
+
+type ListPostsByTagBeforeRow struct {
+	ID          uuid.UUID
+	Slug        string
+	Title       string
+	Summary     string
+	PublishedAt *time.Time
+	WordCount   int32
+}
+
+// The reverse of ListPostsByTag, with the same two plans: a common tag walks
+// posts_pagination_idx backward (ASC is the reverse of the index order) and
+// probes post_tags_pkey; a rare tag reads post_tags_tag_id_idx and sorts.
+// A backward page always has a cursor, so the comparison needs no NULL sentinel.
+// The caller reverses the rows.
+func (q *Queries) ListPostsByTagBefore(ctx context.Context, arg ListPostsByTagBeforeParams) ([]ListPostsByTagBeforeRow, error) {
+	rows, err := q.db.Query(ctx, listPostsByTagBefore,
+		arg.TagID,
+		arg.BeforePublishedAt,
+		arg.BeforeID,
+		arg.PageSize,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPostsByTagBeforeRow
+	for rows.Next() {
+		var i ListPostsByTagBeforeRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Slug,
+			&i.Title,
+			&i.Summary,
+			&i.PublishedAt,
+			&i.WordCount,
 		); err != nil {
 			return nil, err
 		}
