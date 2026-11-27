@@ -252,6 +252,13 @@ test("a topic opens its tag page, which pages through the tag's posts", async ({
     page.getByRole("heading", { level: 1, name: FIXTURE_TAG }),
   ).toBeVisible();
   await expect(page).toHaveTitle(`${FIXTURE_TAG} | Bits by Elmer`);
+  const topics = page.getByRole("navigation", { name: "Topics" });
+  await expect(
+    topics.getByRole("link", { name: FIXTURE_TAG, exact: true }),
+  ).toHaveAttribute("aria-current", "page");
+  await expect(
+    topics.getByRole("link", { name: "Go", exact: true }),
+  ).toHaveAttribute("href", "/tags/go");
 
   const titles = await listedTitles(page);
   let pages = 1;

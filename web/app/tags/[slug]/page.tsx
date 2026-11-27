@@ -1,11 +1,17 @@
 import type { Metadata } from "next";
+import { io } from "next/cache";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { Pagination } from "@/components/pagination";
 import { PostList } from "@/components/post-list";
-import { PostListSkeleton, TagHeadingSkeleton } from "@/components/skeleton";
-import { listPostsByTag } from "@/lib/api";
+import {
+  PostListSkeleton,
+  TagHeadingSkeleton,
+  TopicNavSkeleton,
+} from "@/components/skeleton";
+import { TopicNav } from "@/components/topic-list";
+import { listPostsByTag, listTags, type Tag } from "@/lib/api";
 
 type Props = PageProps<"/tags/[slug]">;
 
@@ -24,9 +30,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
+// Laid out like the devTalk topic page: the tag's name, a row of every
+// topic, then the posts in two columns.
 export default function TagPage({ params, searchParams }: Props) {
   return (
-    <Suspense fallback={<TagPageSkeleton />}>
+    <Suspense
+      fallback={
+        <>
+          <TagHeadingSkeleton />
+          <div className="mb-10">
+            <TopicNavSkeleton />
+          </div>
+          <PostListSkeleton columns={2} />
+        </>
+      }
+    >
       <TagPosts params={params} searchParams={searchParams} />
     </Suspense>
   );
@@ -50,8 +68,18 @@ async function TagPosts({
 
   return (
     <>
-      <TagHeading name={page.tag.name} />
-      <PostList posts={page.items} />
+      <header className="mb-10 space-y-2">
+        <p className="text-sm font-medium text-muted">Topic</p>
+        <h1 className="text-5xl font-semibold tracking-tight break-words">
+          {page.tag.name}
+        </h1>
+      </header>
+      <div className="mb-10">
+        <Suspense fallback={<TopicNavSkeleton />}>
+          <Topics current={slug} />
+        </Suspense>
+      </div>
+      <PostList posts={page.items} columns={2} />
       <Pagination
         prevCursor={page.prev_cursor}
         nextCursor={page.next_cursor}
@@ -61,22 +89,18 @@ async function TagPosts({
   );
 }
 
-function TagHeading({ name }: { name: string }) {
-  return (
-    <header className="mb-10 space-y-2">
-      <p className="text-sm font-medium text-muted">Topic</p>
-      <h1 className="text-5xl font-semibold tracking-tight break-words">
-        {name}
-      </h1>
-    </header>
-  );
-}
-
-function TagPageSkeleton() {
-  return (
-    <>
-      <TagHeadingSkeleton />
-      <PostListSkeleton />
-    </>
-  );
+// The topic row is optional, as on the home page: an API error hides it
+// rather than replacing the page with error.tsx.
+async function Topics({ current }: { current: string }) {
+  // listTags takes no request-derived arguments; io() keeps next build from
+  // calling the API to prerender it.
+  await io();
+  let tags: Tag[];
+  try {
+    tags = await listTags();
+  } catch (err) {
+    console.error("list tags for a tag page", err);
+    return null;
+  }
+  return <TopicNav tags={tags} current={current} />;
 }

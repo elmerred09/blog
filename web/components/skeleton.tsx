@@ -39,20 +39,42 @@ export function TopicListSkeleton() {
   );
 }
 
+// Stand-in for TopicNav: a row of chips, no text.
+export function TopicNavSkeleton() {
+  return (
+    <div aria-hidden="true" className="relative overflow-hidden">
+      <ul className="flex flex-wrap gap-1">
+        {topicChipWidths.map((width) => (
+          <li key={width}>
+            <div className={`h-10 rounded-lg bg-line ${width}`} />
+          </li>
+        ))}
+      </ul>
+      <Shimmer />
+    </div>
+  );
+}
+
 const postCards = [
   { title: "w-2/3", summary: "w-4/5" },
   { title: "w-1/2", summary: "w-3/5" },
   { title: "w-3/4", summary: "w-5/6" },
 ];
 
-// Stand-in for the home post list: the same card bands, with no text.
-export function PostListSkeleton() {
+// Stand-in for a post list: the same card bands, with no text. columns
+// matches PostList's.
+export function PostListSkeleton({ columns = 1 }: { columns?: 1 | 2 }) {
   return (
     <div aria-busy="true">
       <p className="sr-only" role="status">
         Loading posts…
       </p>
-      <ul aria-hidden="true" className="space-y-5">
+      <ul
+        aria-hidden="true"
+        className={
+          columns === 2 ? "grid gap-5 md:grid-cols-2" : "flex flex-col gap-5"
+        }
+      >
         {postCards.map((card) => (
           <li key={card.title}>
             <article className="relative overflow-hidden rounded-2xl border border-line bg-card">

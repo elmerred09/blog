@@ -54,6 +54,18 @@ describe("PostList", () => {
     expect(within(first).getByText("Postgres")).toBeTruthy();
   });
 
+  it("lays out two columns from md up when asked", () => {
+    const { rerender } = render(<PostList posts={posts} />);
+    expect(screen.getAllByRole("list")[0].className).not.toContain(
+      "grid-cols-2",
+    );
+
+    rerender(<PostList posts={posts} columns={2} />);
+    expect(screen.getAllByRole("list")[0].className).toContain(
+      "md:grid-cols-2",
+    );
+  });
+
   it("says so when there are no posts", () => {
     render(<PostList posts={[]} />);
 
