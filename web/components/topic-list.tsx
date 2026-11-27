@@ -26,19 +26,30 @@ export function TopicList({ tags }: Props) {
 }
 
 // The row of every topic above a tag page's posts, as on the devTalk topic
-// page. The current tag's chip is marked and filled.
+// page: large chips, with the current tag's chip marked and filled black.
 export function TopicNav({ tags, current }: Props & { current: string }) {
   if (tags.length === 0) {
     return null;
   }
   return (
     <nav aria-label="Topics">
-      <TopicChips tags={tags} current={current} />
+      <TopicChips tags={tags} current={current} size="large" />
     </nav>
   );
 }
 
-function TopicChips({ tags, current }: Props & { current?: string }) {
+// The devTalk template's tag-topic chip in its two sizes. Hover darkens the
+// border; the current chip is solid foreground.
+const chipSizes = {
+  default: "h-10 rounded-lg px-4 text-sm",
+  large: "h-20 rounded-2xl px-8 text-base",
+};
+
+function TopicChips({
+  tags,
+  current,
+  size = "default",
+}: Props & { current?: string; size?: keyof typeof chipSizes }) {
   return (
     <ul className="flex flex-wrap gap-1">
       {tags.map((tag) => {
@@ -48,10 +59,10 @@ function TopicChips({ tags, current }: Props & { current?: string }) {
             <Link
               href={`/tags/${tag.slug}`}
               aria-current={isCurrent ? "page" : undefined}
-              className={`flex h-10 items-center rounded-lg border px-4 text-sm hover:underline ${
+              className={`flex items-center border transition-colors duration-200 hover:underline ${chipSizes[size]} ${
                 isCurrent
-                  ? "border-brand bg-chip font-medium text-brand-strong"
-                  : "border-line bg-card text-muted"
+                  ? "border-foreground bg-foreground text-background"
+                  : "border-line bg-card text-muted hover:border-subtle"
               }`}
             >
               {tag.name}

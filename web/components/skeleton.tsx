@@ -11,6 +11,7 @@ function Shimmer() {
 }
 
 const topicChipWidths = ["w-20", "w-16", "w-24", "w-14", "w-28"];
+const topicNavChipWidths = ["w-28", "w-24", "w-36", "w-32", "w-40"];
 
 // Stand-in for TopicList. The heading is real: it does not come from the API.
 export function TopicListSkeleton() {
@@ -44,9 +45,9 @@ export function TopicNavSkeleton() {
   return (
     <div aria-hidden="true" className="relative overflow-hidden">
       <ul className="flex flex-wrap gap-1">
-        {topicChipWidths.map((width) => (
+        {topicNavChipWidths.map((width) => (
           <li key={width}>
-            <div className={`h-10 rounded-lg bg-line ${width}`} />
+            <div className={`h-20 rounded-2xl bg-line ${width}`} />
           </li>
         ))}
       </ul>
