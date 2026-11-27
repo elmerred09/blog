@@ -5,12 +5,15 @@ export type SitemapPost = {
   lastModified: string;
 };
 
-// buildSitemap is the home page plus one URL per post. The home page's
-// last-modified time is the newest post, so a publish shows up there too.
-// posts may arrive in any order.
+// buildSitemap is the home page, one URL per post, then one per tag page.
+// The home page's last-modified time is the newest post, so a publish shows
+// up there too. posts may arrive in any order. Tag pages carry no
+// last-modified time: the API doesn't say when a tag's post list changed,
+// and a wrong date is worse than none.
 export function buildSitemap(
   siteURL: string,
   posts: SitemapPost[],
+  tagSlugs: string[] = [],
 ): MetadataRoute.Sitemap {
   const base = siteURL.replace(/\/$/, "");
   const home: MetadataRoute.Sitemap[number] = { url: `${base}/` };
@@ -29,5 +32,6 @@ export function buildSitemap(
       url: `${base}/posts/${post.slug}`,
       lastModified: post.lastModified,
     })),
+    ...tagSlugs.map((slug) => ({ url: `${base}/tags/${slug}` })),
   ];
 }

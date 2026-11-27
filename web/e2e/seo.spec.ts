@@ -12,12 +12,13 @@ test("robots.txt disallows the whole site", async ({ page }) => {
   await expect(page.locator("body")).not.toContainText("Allow: /");
 });
 
-test("the sitemap lists a published fixture and skips drafts", async ({
+test("the sitemap lists a published fixture and its tag, and skips drafts", async ({
   page,
 }) => {
   await page.goto("/sitemap.xml");
   const body = page.locator("body");
   await expect(body).toContainText(`/posts/${CODE_POST.slug}`);
+  await expect(body).toContainText("/tags/e2e-fixtures");
   await expect(body).not.toContainText(DRAFT_POST.slug);
   await expect(body).not.toContainText(SCHEDULED_POST.slug);
 });

@@ -132,7 +132,7 @@ jobs:
           sbom: false
           build-args: |
             SITE_URL=${{ vars.SITE_URL }}
-            SITE_INDEXING=false
+            SITE_INDEXING=${{ vars.SITE_INDEXING == 'true' && 'true' || 'false' }}
           tags: ghcr.io/elmerred09/blog-web:${{ env.DEPLOY_SHA }}
           cache-from: type=gha,scope=web
           cache-to: type=gha,scope=web,mode=max
