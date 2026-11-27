@@ -1,4 +1,4 @@
-import type { AdminPostInput, UploadInput } from "@/lib/api/types";
+import type { AdminPostInput, TagColor, UploadInput } from "@/lib/api/types";
 
 // Server actions are public POST endpoints: TypeScript types don't reach the
 // wire. These checks keep a malformed call from reaching the API as something
@@ -93,4 +93,15 @@ export function parsePreviewInput(raw: unknown): string {
     throw new Error("invalid preview: expected the markdown body");
   }
   return raw;
+}
+
+export type TagColorInput = { slug: string; color: TagColor };
+
+// Whether the color is in the palette is the API's call; it answers with a
+// problem on color.
+export function parseTagColorInput(raw: unknown): TagColorInput {
+  if (!isRecord(raw) || !isString(raw.slug) || !isString(raw.color)) {
+    throw new Error("invalid tag color: expected slug and color strings");
+  }
+  return { slug: raw.slug, color: raw.color as TagColor };
 }

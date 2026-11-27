@@ -5,15 +5,17 @@ import { updateTag } from "next/cache";
 import {
   parsePreviewInput,
   parseSavePostInput,
+  parseTagColorInput,
   parseUploadInput,
   type SavePostInput,
+  type TagColorInput,
 } from "@/lib/admin/input";
 import { requireAdmin } from "@/lib/admin/session";
 import * as api from "@/lib/api/admin";
 import type { Outcome } from "@/lib/api/admin";
-import type { AdminPost, Upload, UploadInput } from "@/lib/api/types";
+import type { AdminPost, Tag, Upload, UploadInput } from "@/lib/api/types";
 
-export type { SavePostInput };
+export type { SavePostInput, TagColorInput };
 
 // Each action checks the session itself: an action is reachable by POST from
 // anywhere, whatever page it was rendered on.
@@ -56,4 +58,16 @@ export async function createImageUpload(
 ): Promise<Outcome<Upload>> {
   const admin = await requireAdmin();
   return api.createImageUpload(admin, parseUploadInput(input));
+}
+
+// setTagColor changes a tag's chip color. Every cached list and post page
+// carries the posts cache tag, so expiring it repaints the chip everywhere.
+export async function setTagColor(input: TagColorInput): Promise<Outcome<Tag>> {
+  const admin = await requireAdmin();
+  const { slug, color } = parseTagColorInput(input);
+  const result = await api.setTagColor(admin, slug, color);
+  if (result.ok) {
+    updateTag("posts");
+  }
+  return result;
 }

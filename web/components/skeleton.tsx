@@ -307,3 +307,29 @@ function EditorField({ label }: { label: string }) {
     </div>
   );
 }
+
+const adminTagWidths = ["w-12", "w-20", "w-16", "w-24"];
+
+// Stand-in for the admin tag list: a chip and a row of swatches per tag.
+export function AdminTagListSkeleton() {
+  return (
+    <div aria-hidden="true" className="relative overflow-hidden">
+      <ul className="divide-y divide-line">
+        {adminTagWidths.map((width) => (
+          <li
+            key={width}
+            className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 py-4"
+          >
+            <div className={`h-6 rounded-md bg-line ${width}`} />
+            <div className="flex gap-2">
+              {Array.from({ length: 8 }, (_, i) => (
+                <div key={i} className="size-7 rounded-full bg-line" />
+              ))}
+            </div>
+          </li>
+        ))}
+      </ul>
+      <Shimmer />
+    </div>
+  );
+}

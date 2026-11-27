@@ -13,6 +13,7 @@ import type {
   ErrorCode,
   Problem,
   Tag,
+  TagColor,
   Upload,
   UploadInput,
 } from "./types";
@@ -163,4 +164,20 @@ export async function listAdminTags(admin: Admin): Promise<Tag[]> {
     headers: await authorization(admin),
   });
   return unwrap(result).tags;
+}
+
+// Sets the tag's chip color. A name outside the palette is invalid_request
+// with a problem on color; an unknown tag is not_found.
+export async function setTagColor(
+  admin: Admin,
+  slug: string,
+  color: TagColor,
+): Promise<Outcome<Tag>> {
+  return outcome(
+    await apiClient().PATCH("/api/v1/admin/tags/{slug}", {
+      params: { path: { slug } },
+      body: { color },
+      headers: await authorization(admin),
+    }),
+  );
 }
