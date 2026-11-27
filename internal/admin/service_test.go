@@ -533,3 +533,53 @@ func TestListEmpty(t *testing.T) {
 		t.Errorf("page = %+v, want empty Items and no cursors", page)
 	}
 }
+
+func TestDelete(t *testing.T) {
+	t.Parallel()
+	_, svc := newService(t)
+	ctx := t.Context()
+
+	created, err := svc.Create(ctx, input("doomed"))
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	kept, err := svc.Create(ctx, input("kept"))
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	if err := svc.Delete(ctx, created.ID); err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+
+	if _, err := svc.Get(ctx, created.ID); !errors.Is(err, admin.ErrNotFound) {
+		t.Errorf("Get after delete: err = %v, want ErrNotFound", err)
+	}
+	page, err := svc.List(ctx, admin.ListParams{Limit: admin.DefaultLimit})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	var ids []uuid.UUID
+	for _, it := range page.Items {
+		ids = append(ids, it.ID)
+	}
+	if !slices.Equal(ids, []uuid.UUID{kept.ID}) {
+		t.Errorf("listed ids = %v, want only the kept post %v", ids, kept.ID)
+	}
+
+	t.Run("deleting again is not found", func(t *testing.T) {
+		if err := svc.Delete(ctx, created.ID); !errors.Is(err, admin.ErrNotFound) {
+			t.Errorf("err = %v, want ErrNotFound", err)
+		}
+	})
+	t.Run("an unknown id is not found", func(t *testing.T) {
+		if err := svc.Delete(ctx, uuid.New()); !errors.Is(err, admin.ErrNotFound) {
+			t.Errorf("err = %v, want ErrNotFound", err)
+		}
+	})
+	t.Run("the slug stays reserved", func(t *testing.T) {
+		if _, err := svc.Create(ctx, input("doomed")); !errors.Is(err, admin.ErrSlugTaken) {
+			t.Errorf("Create with a deleted post's slug: err = %v, want ErrSlugTaken", err)
+		}
+	})
+}

@@ -35,6 +35,11 @@ function bodyRows() {
   return screen.getAllByRole("row").slice(1);
 }
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }),
+}));
+vi.mock("@/app/admin/actions", () => ({ deletePost: vi.fn() }));
+
 describe("AdminPostList", () => {
   beforeEach(() => {
     vi.stubEnv("TZ", "America/New_York");
@@ -58,11 +63,14 @@ describe("AdminPostList", () => {
     ).toBe(href);
   });
 
-  it("has a delete button per post that isn't wired up yet", () => {
+  it("has a delete button per post", () => {
     render(<AdminPostList posts={items} />);
 
-    const button = screen.getByRole("button", { name: "Delete A draft" });
-    expect(button.getAttribute("aria-disabled")).toBe("true");
+    expect(
+      screen
+        .getByRole("button", { name: "Delete A draft" })
+        .getAttribute("aria-disabled"),
+    ).toBeNull();
   });
 
   it("shows each post's state", () => {

@@ -7,6 +7,7 @@ import type { Admin } from "@/lib/admin/session";
 import {
   createAdminPost,
   createImageUpload,
+  deleteAdminPost,
   getAdminPost,
   listAdminPosts,
   listAdminTags,
@@ -379,5 +380,37 @@ describe("setTagColor", () => {
       ok: false,
       error: { code: "not_found", message: "tag not found", problems: [] },
     });
+  });
+});
+
+describe("deleteAdminPost", () => {
+  it("deletes the post", async () => {
+    const requests = stubFetch(new Response(null, { status: 204 }));
+
+    await expect(deleteAdminPost(admin, post.id)).resolves.toEqual({
+      ok: true,
+      value: undefined,
+    });
+
+    const req = only(requests);
+    expect(req.method).toBe("DELETE");
+    expect(new URL(req.url).pathname).toBe(`/api/v1/admin/posts/${post.id}`);
+  });
+
+  it("returns not_found as a value", async () => {
+    stubFetch(apiError(404, "not_found", "post not found"));
+
+    await expect(deleteAdminPost(admin, post.id)).resolves.toEqual({
+      ok: false,
+      error: { code: "not_found", message: "post not found", problems: [] },
+    });
+  });
+
+  it("throws on a 500", async () => {
+    stubFetch(apiError(500, "internal", "boom"));
+
+    await expect(deleteAdminPost(admin, post.id)).rejects.toBeInstanceOf(
+      ApiError,
+    );
   });
 });

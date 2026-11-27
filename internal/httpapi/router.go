@@ -105,6 +105,7 @@ func newEngine(d Deps) *gin.Engine {
 		g.POST("/posts", createAdminPost(d.Admin.Posts))
 		g.GET("/posts/:id", getAdminPost(d.Admin.Posts))
 		g.PUT("/posts/:id", updateAdminPost(d.Admin.Posts))
+		g.DELETE("/posts/:id", deleteAdminPost(d.Admin.Posts))
 		g.POST("/preview", previewPost(d.Admin.Posts))
 		g.POST("/uploads", createUpload(d.Admin.Media))
 		g.GET("/tags", listTags(d.Tags, tags.All))

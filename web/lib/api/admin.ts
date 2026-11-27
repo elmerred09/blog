@@ -181,3 +181,20 @@ export async function setTagColor(
     }),
   );
 }
+
+// Soft-deletes the post. A post that is missing or already deleted is
+// not_found.
+export async function deleteAdminPost(
+  admin: Admin,
+  id: string,
+): Promise<Outcome<void>> {
+  const result = await apiClient().DELETE("/api/v1/admin/posts/{id}", {
+    params: { path: { id } },
+    headers: await authorization(admin),
+  });
+  // A 204 has no body, so there is no data for outcome to check.
+  if (result.response.status === 204) {
+    return { ok: true, value: undefined };
+  }
+  return outcome(result as Result<never>);
+}

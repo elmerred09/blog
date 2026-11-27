@@ -187,7 +187,8 @@ export interface paths {
         /** Save a post. updated_at must be the token the editor loaded; a stale one is 409. */
         put: operations["updateAdminPost"];
         post?: never;
-        delete?: never;
+        /** Soft-delete a post. It leaves the public site and the admin; its slug stays taken. */
+        delete: operations["deleteAdminPost"];
         options?: never;
         head?: never;
         patch?: never;
@@ -910,6 +911,32 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             413: components["responses"]["TooLarge"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Timeout"];
+        };
+    };
+    deleteAdminPost: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["PostID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The post is deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             500: components["responses"]["Internal"];
             503: components["responses"]["Timeout"];
         };

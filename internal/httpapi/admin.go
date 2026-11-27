@@ -156,6 +156,22 @@ func getAdminPost(posts *admin.Service) gin.HandlerFunc {
 	}
 }
 
+// deleteAdminPost soft-deletes the post. 204 on success; 404 if it is
+// missing or already deleted.
+func deleteAdminPost(posts *admin.Service) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id, ok := postID(c)
+		if !ok {
+			return
+		}
+		if err := posts.Delete(c.Request.Context(), id); err != nil {
+			writeAdminError(c, err)
+			return
+		}
+		c.Status(http.StatusNoContent)
+	}
+}
+
 func updateAdminPost(posts *admin.Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id, ok := postID(c)

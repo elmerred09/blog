@@ -105,3 +105,13 @@ export function parseTagColorInput(raw: unknown): TagColorInput {
   }
   return { slug: raw.slug, color: raw.color as TagColor };
 }
+
+// slug is the post's stored slug, whose page the delete expires.
+export type DeletePostInput = { id: string; slug: string };
+
+export function parseDeletePostInput(raw: unknown): DeletePostInput {
+  if (!isRecord(raw) || !isString(raw.id) || !isString(raw.slug)) {
+    throw new Error("invalid delete: expected id and slug strings");
+  }
+  return { id: raw.id, slug: raw.slug };
+}
