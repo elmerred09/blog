@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/elmerred09/blog/internal/db"
@@ -78,6 +79,48 @@ func TestUpsertTagRejectsUppercaseSlug(t *testing.T) {
 	if pgErr.Code != checkViolation || pgErr.ConstraintName != "tags_slug_check" {
 		t.Errorf("got SQLSTATE %s on constraint %q, want %s (check_violation) on %q",
 			pgErr.Code, pgErr.ConstraintName, checkViolation, "tags_slug_check")
+	}
+}
+
+func TestUpdateTagColor(t *testing.T) {
+	t.Parallel()
+	pool, q := env.NewDB(t)
+	ctx := t.Context()
+	dbtest.InsertTag(t, pool, "go")
+
+	color := func() string {
+		t.Helper()
+		rows, err := q.GetTagsBySlugs(ctx, []string{"go"})
+		if err != nil || len(rows) != 1 {
+			t.Fatalf("GetTagsBySlugs = %+v, %v; want one row", rows, err)
+		}
+		return rows[0].Color
+	}
+
+	if got := color(); got != "slate" {
+		t.Errorf("new tag's color = %q, want the default %q", got, "slate")
+	}
+
+	row, err := q.UpdateTagColor(ctx, db.UpdateTagColorParams{Slug: "go", Color: "teal"})
+	if err != nil {
+		t.Fatalf("UpdateTagColor(go, teal): %v", err)
+	}
+	if want := (db.UpdateTagColorRow{Slug: "go", Name: "go", Color: "teal"}); row != want {
+		t.Errorf("returned row = %+v, want %+v", row, want)
+	}
+	if got := color(); got != "teal" {
+		t.Errorf("color after update = %q, want %q", got, "teal")
+	}
+
+	_, err = q.UpdateTagColor(ctx, db.UpdateTagColorParams{Slug: "rust", Color: "teal"})
+	if !errors.Is(err, pgx.ErrNoRows) {
+		t.Errorf("UpdateTagColor(unknown slug) err = %v, want pgx.ErrNoRows", err)
+	}
+
+	_, err = q.UpdateTagColor(ctx, db.UpdateTagColorParams{Slug: "go", Color: "magenta"})
+	var pgErr *pgconn.PgError
+	if !errors.As(err, &pgErr) || pgErr.Code != "23514" || pgErr.ConstraintName != "tags_color_check" {
+		t.Errorf("UpdateTagColor(magenta) err = %v, want check_violation on tags_color_check", err)
 	}
 }
 

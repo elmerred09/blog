@@ -17,9 +17,9 @@ describe("PostMeta", () => {
       <PostMeta
         publishedAt="2026-10-01T12:00:00Z"
         tags={[
-          { slug: "postgres", name: "Postgres" },
-          { slug: "go", name: "Go" },
-          { slug: "api-design", name: "API design" },
+          { slug: "postgres", name: "Postgres", color: "slate" },
+          { slug: "go", name: "Go", color: "slate" },
+          { slug: "api-design", name: "API design", color: "slate" },
         ]}
       />,
     );

@@ -29,13 +29,13 @@ func TestListPostsByTag(t *testing.T) {
 			t.Errorf("keys = %v, want %v", got, want)
 		}
 		page := decode[tagPageJSON](t, rec)
-		if page.Tag != (tagJSON{Slug: "go", Name: "go"}) {
+		if page.Tag != (tagJSON{Slug: "go", Name: "go", Color: "slate"}) {
 			t.Errorf("tag = %+v", page.Tag)
 		}
 		if got := slugsOf(page.Items); !slices.Equal(got, []string{"newest", "middle"}) {
 			t.Errorf("items = %v, want newest, middle", got)
 		}
-		if want := []tagJSON{{Slug: "go", Name: "go"}, {Slug: "postgres", Name: "postgres"}}; !slices.Equal(page.Items[0].Tags, want) {
+		if want := []tagJSON{{Slug: "go", Name: "go", Color: "slate"}, {Slug: "postgres", Name: "postgres", Color: "slate"}}; !slices.Equal(page.Items[0].Tags, want) {
 			t.Errorf("newest tags = %v, want %v", page.Items[0].Tags, want)
 		}
 		if page.PrevCursor != nil || page.NextCursor == nil {

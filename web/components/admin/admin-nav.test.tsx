@@ -23,10 +23,32 @@ describe("AdminNav", () => {
     },
   );
 
-  it.each(["/admin", "/admin/posts/new"])("offers sign-out on %s", (path) => {
+  it.each(["/admin", "/admin/posts/new", "/admin/tags"])(
+    "offers the admin pages and sign-out on %s",
+    (path) => {
+      pathname.current = path;
+      render(<AdminNav />);
+      expect(screen.getByRole("button", { name: "Sign out" })).toBeDefined();
+      expect(
+        screen.getByRole("link", { name: "Posts" }).getAttribute("href"),
+      ).toBe("/admin");
+      expect(
+        screen.getByRole("link", { name: "Tags" }).getAttribute("href"),
+      ).toBe("/admin/tags");
+    },
+  );
+
+  it.each([
+    ["/admin", "Posts"],
+    ["/admin/posts/new", "Posts"],
+    ["/admin/tags", "Tags"],
+  ])("marks the current section on %s", (path, current) => {
     pathname.current = path;
     render(<AdminNav />);
-    expect(screen.getByRole("button", { name: "Sign out" })).toBeDefined();
-    expect(screen.queryByRole("link")).toBeNull();
+    const marked = screen
+      .getAllByRole("link")
+      .filter((a) => a.getAttribute("aria-current") === "page")
+      .map((a) => a.textContent);
+    expect(marked).toEqual([current]);
   });
 });

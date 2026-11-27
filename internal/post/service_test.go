@@ -140,7 +140,7 @@ func TestListItemFields(t *testing.T) {
 		t.Errorf("item = %+v, want title Tagged, summary %q, published_at %v",
 			first, "Summary of tagged", *tagged.PublishedAt)
 	}
-	if want := []post.Tag{{Slug: "go", Name: "go"}, {Slug: "search", Name: "search"}}; !slices.Equal(first.Tags, want) {
+	if want := []post.Tag{{Slug: "go", Name: "go", Color: "slate"}, {Slug: "search", Name: "search", Color: "slate"}}; !slices.Equal(first.Tags, want) {
 		t.Errorf("tags = %v, want %v (sorted by slug)", first.Tags, want)
 	}
 	if tags := page.Items[1].Tags; tags == nil || len(tags) != 0 {
@@ -200,7 +200,7 @@ func TestGet(t *testing.T) {
 			got.BodyHTML != "<h1>Tagged</h1>" || !got.PublishedAt.Equal(*tagged.PublishedAt) || got.UpdatedAt.IsZero() {
 			t.Errorf("post = %+v", got)
 		}
-		if want := []post.Tag{{Slug: "go", Name: "go"}, {Slug: "postgres", Name: "postgres"}}; !slices.Equal(got.Tags, want) {
+		if want := []post.Tag{{Slug: "go", Name: "go", Color: "slate"}, {Slug: "postgres", Name: "postgres", Color: "slate"}}; !slices.Equal(got.Tags, want) {
 			t.Errorf("tags = %v, want %v", got.Tags, want)
 		}
 		if got.ReadingMinutes != 3 {

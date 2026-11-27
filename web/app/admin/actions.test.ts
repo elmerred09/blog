@@ -10,6 +10,7 @@ import {
   createImageUpload,
   previewPost,
   savePost,
+  setTagColor,
   type SavePostInput,
 } from "./actions";
 
@@ -21,6 +22,7 @@ vi.mock("@/lib/api/admin", () => ({
   updateAdminPost: vi.fn(),
   previewPost: vi.fn(),
   createImageUpload: vi.fn(),
+  setTagColor: vi.fn(),
 }));
 
 const admin: Admin = { githubId: "123", name: "Elmer" };
@@ -45,7 +47,7 @@ function saved(slug: string): AdminPost {
     created_at: "2026-10-18T11:00:00Z",
     updated_at: "2026-10-18T12:05:00.000001Z",
     state: "scheduled",
-    tags: [{ slug: "postgres", name: "Postgres" }],
+    tags: [{ slug: "postgres", name: "Postgres", color: "slate" }],
   };
 }
 
@@ -255,4 +257,48 @@ describe("createImageUpload", () => {
       /invalid upload/,
     );
   });
+});
+
+describe("setTagColor", () => {
+  it("sets the color and expires every page that shows tags", async () => {
+    const tag = { slug: "go", name: "Go", color: "teal" as const };
+    vi.mocked(api.setTagColor).mockResolvedValue({ ok: true, value: tag });
+
+    const result = await setTagColor({ slug: "go", color: "teal" });
+
+    expect(result).toEqual({ ok: true, value: tag });
+    expect(api.setTagColor).toHaveBeenCalledWith(admin, "go", "teal");
+    expect(tags()).toEqual(["posts"]);
+  });
+
+  it("returns a failure without expiring anything", async () => {
+    const failure = {
+      ok: false as const,
+      error: { code: "not_found" as const, message: "no", problems: [] },
+    };
+    vi.mocked(api.setTagColor).mockResolvedValue(failure);
+
+    await expect(setTagColor({ slug: "rust", color: "teal" })).resolves.toEqual(
+      failure,
+    );
+    expect(tags()).toEqual([]);
+  });
+
+  it("requires an admin", async () => {
+    signedOut();
+
+    await expect(setTagColor({ slug: "go", color: "teal" })).rejects.toThrow(
+      "NEXT_REDIRECT",
+    );
+    expect(api.setTagColor).not.toHaveBeenCalled();
+  });
+
+  it.each([null, "go", { slug: "go" }, { slug: 1, color: "teal" }])(
+    "rejects a malformed call %j",
+    async (input) => {
+      await expect(setTagColor(input as never)).rejects.toThrow(
+        "invalid tag color",
+      );
+    },
+  );
 });

@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import {
+  AdminTagListSkeleton,
   AdminPostListSkeleton,
   PostEditorSkeleton,
   PostListSkeleton,
@@ -77,6 +78,16 @@ describe("TagHeadingSkeleton", () => {
 describe("TopicNavSkeleton", () => {
   it("is hidden from assistive tech", () => {
     const { container } = render(<TopicNavSkeleton />);
+
+    expect(container.firstElementChild?.getAttribute("aria-hidden")).toBe(
+      "true",
+    );
+  });
+});
+
+describe("AdminTagListSkeleton", () => {
+  it("is hidden from assistive tech", () => {
+    const { container } = render(<AdminTagListSkeleton />);
 
     expect(container.firstElementChild?.getAttribute("aria-hidden")).toBe(
       "true",

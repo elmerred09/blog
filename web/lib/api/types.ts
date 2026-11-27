@@ -3,6 +3,7 @@ import type { components } from "./schema";
 type Schemas = components["schemas"];
 
 export type Tag = Schemas["Tag"];
+export type TagColor = Schemas["TagColor"];
 export type PostListItem = Schemas["PostListItem"];
 export type Post = Schemas["Post"];
 export type Page = Schemas["Page"];

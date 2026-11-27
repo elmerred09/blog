@@ -1,6 +1,7 @@
 package tags_test
 
 import (
+	"errors"
 	"maps"
 	"slices"
 	"testing"
@@ -10,6 +11,7 @@ import (
 	"github.com/elmerred09/blog/internal/db"
 	"github.com/elmerred09/blog/internal/platform/db/dbtest"
 	"github.com/elmerred09/blog/internal/tags"
+	"github.com/elmerred09/blog/internal/validation"
 )
 
 func TestEnsure(t *testing.T) {
@@ -197,4 +199,57 @@ func TestStoreList(t *testing.T) {
 			t.Error("List(0) = nil error, want one")
 		}
 	})
+}
+
+func TestStoreSetColor(t *testing.T) {
+	t.Parallel()
+	pool, _ := env.NewDB(t)
+	dbtest.InsertTag(t, pool, "go")
+	store := tags.NewStore(pool)
+
+	tests := []struct {
+		name        string
+		slug, color string
+		want        tags.Tag
+		wantErr     error
+		wantInvalid bool
+	}{
+		{name: "palette color", slug: "go", color: "teal", want: tags.Tag{Slug: "go", Name: "go", Color: "teal"}},
+		{name: "back to the default", slug: "go", color: "slate", want: tags.Tag{Slug: "go", Name: "go", Color: "slate"}},
+		{name: "color outside the palette", slug: "go", color: "magenta", wantInvalid: true},
+		{name: "empty color", slug: "go", color: "", wantInvalid: true},
+		{name: "unknown tag", slug: "rust", color: "teal", wantErr: tags.ErrNotFound},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := store.SetColor(t.Context(), tc.slug, tc.color)
+			var invalid *validation.Error
+			switch {
+			case tc.wantInvalid:
+				if !errors.As(err, &invalid) || len(invalid.Problems) != 1 || invalid.Problems[0].Field != "color" {
+					t.Errorf("err = %v, want one validation problem on color", err)
+				}
+			case tc.wantErr != nil:
+				if !errors.Is(err, tc.wantErr) {
+					t.Errorf("err = %v, want %v", err, tc.wantErr)
+				}
+			default:
+				if err != nil || got != tc.want {
+					t.Errorf("SetColor = %+v, %v; want %+v", got, err, tc.want)
+				}
+			}
+		})
+	}
+}
+
+func TestColorsMatchesTheConstraint(t *testing.T) {
+	t.Parallel()
+	pool, q := env.NewDB(t)
+	dbtest.InsertTag(t, pool, "go")
+
+	for _, c := range tags.Colors() {
+		if _, err := q.UpdateTagColor(t.Context(), db.UpdateTagColorParams{Slug: "go", Color: c}); err != nil {
+			t.Errorf("tags_color_check rejects palette color %q: %v", c, err)
+		}
+	}
 }

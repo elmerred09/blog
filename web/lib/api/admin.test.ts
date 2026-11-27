@@ -11,6 +11,7 @@ import {
   listAdminPosts,
   listAdminTags,
   previewPost,
+  setTagColor,
   updateAdminPost,
 } from "./admin";
 import { ApiError } from "./errors";
@@ -42,7 +43,7 @@ const post: AdminPost = {
   created_at: "2026-10-18T11:00:00Z",
   updated_at: LOCK,
   state: "draft",
-  tags: [{ slug: "postgres", name: "Postgres" }],
+  tags: [{ slug: "postgres", name: "Postgres", color: "slate" }],
 };
 
 const input: AdminPostInput = {
@@ -346,9 +347,37 @@ describe("createImageUpload", () => {
 
 describe("listAdminTags", () => {
   it("returns every tag", async () => {
-    const tags = [{ slug: "drafts-only", name: "Drafts only" }];
+    const tags = [{ slug: "drafts-only", name: "Drafts only", color: "slate" }];
     stubFetch(json(200, { tags }));
 
     await expect(listAdminTags(admin)).resolves.toEqual(tags);
+  });
+});
+
+describe("setTagColor", () => {
+  it("patches the tag's color and returns the tag", async () => {
+    const tag = { slug: "go", name: "Go", color: "teal" as const };
+    const requests = stubFetch(json(200, tag));
+
+    await expect(setTagColor(admin, "go", "teal")).resolves.toEqual({
+      ok: true,
+      value: tag,
+    });
+
+    const req = only(requests);
+    expect(req.method).toBe("PATCH");
+    expect(new URL(req.url).pathname).toBe("/api/v1/admin/tags/go");
+    await expect(req.json()).resolves.toEqual({ color: "teal" });
+  });
+
+  it("returns not_found as a value", async () => {
+    stubFetch(apiError(404, "not_found", "tag not found"));
+
+    const result = await setTagColor(admin, "rust", "teal");
+
+    expect(result).toEqual({
+      ok: false,
+      error: { code: "not_found", message: "tag not found", problems: [] },
+    });
   });
 });

@@ -72,7 +72,7 @@ const post: AdminPost = {
   created_at: "2026-10-01T11:00:00Z",
   updated_at: "2026-10-18T12:00:12.345678Z",
   state: "published",
-  tags: [{ slug: "postgres", name: "Postgres" }],
+  tags: [{ slug: "postgres", name: "Postgres", color: "slate" }],
 };
 
 function renderEditor(current: AdminPost | null = null) {

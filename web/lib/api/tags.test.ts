@@ -11,8 +11,8 @@ vi.mock("next/cache", () => ({ cacheLife: vi.fn(), cacheTag: vi.fn() }));
 const API_URL = "http://api.test";
 
 const tags: Tag[] = [
-  { slug: "go", name: "Go" },
-  { slug: "postgres", name: "Postgres" },
+  { slug: "go", name: "Go", color: "slate" },
+  { slug: "postgres", name: "Postgres", color: "slate" },
 ];
 
 function json(status: number, body: unknown): Response {
@@ -80,7 +80,7 @@ describe("listTags", () => {
 
 describe("listPostsByTag", () => {
   const page: TagPage = {
-    tag: { slug: "go", name: "Go" },
+    tag: { slug: "go", name: "Go", color: "slate" },
     items: [
       {
         slug: "hello",
@@ -88,7 +88,7 @@ describe("listPostsByTag", () => {
         summary: "Hi",
         published_at: "2026-01-01T00:00:00Z",
         reading_minutes: 1,
-        tags: [{ slug: "go", name: "Go" }],
+        tags: [{ slug: "go", name: "Go", color: "slate" }],
       },
     ],
     next_cursor: "next",

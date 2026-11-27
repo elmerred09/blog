@@ -261,7 +261,7 @@ func TestSearchResultFields(t *testing.T) {
 	if got.Title != "Badgers" || got.Summary != "All about badgers." || !got.PublishedAt.Equal(*p.PublishedAt) {
 		t.Errorf("result = %+v", got.ListItem)
 	}
-	if want := []post.Tag{{Slug: "animals", Name: "animals"}, {Slug: "zoo", Name: "zoo"}}; !slices.Equal(got.Tags, want) {
+	if want := []post.Tag{{Slug: "animals", Name: "animals", Color: "slate"}, {Slug: "zoo", Name: "zoo", Color: "slate"}}; !slices.Equal(got.Tags, want) {
 		t.Errorf("tags = %v, want %v (sorted by slug)", got.Tags, want)
 	}
 	if tags := byslug["untagged"].Tags; tags == nil || len(tags) != 0 {

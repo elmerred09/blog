@@ -13,8 +13,9 @@ import (
 )
 
 type tagJSON struct {
-	Slug string `json:"slug"`
-	Name string `json:"name"`
+	Slug  string `json:"slug"`
+	Name  string `json:"name"`
+	Color string `json:"color"`
 }
 
 type listItemJSON struct {

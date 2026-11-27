@@ -36,4 +36,5 @@ type Tag struct {
 	Name      string
 	CreatedAt time.Time
 	UpdatedAt time.Time
+	Color     string
 }

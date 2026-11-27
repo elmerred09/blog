@@ -66,7 +66,7 @@ func TestListPostsShape(t *testing.T) {
 	if got.Slug != "tagged" || got.Title != "Tagged" || got.Summary != "Summary of tagged" {
 		t.Errorf("first item = %+v", got)
 	}
-	if want := []tagJSON{{Slug: "go", Name: "go"}, {Slug: "search", Name: "search"}}; !slices.Equal(got.Tags, want) {
+	if want := []tagJSON{{Slug: "go", Name: "go", Color: "slate"}, {Slug: "search", Name: "search", Color: "slate"}}; !slices.Equal(got.Tags, want) {
 		t.Errorf("tags = %v, want %v", got.Tags, want)
 	}
 	if at, _ := first["published_at"].(string); !strings.HasSuffix(at, "Z") {
@@ -221,7 +221,7 @@ func TestGetPost(t *testing.T) {
 			got.ReadingMinutes != 1 {
 			t.Errorf("post = %+v", got)
 		}
-		if want := []tagJSON{{Slug: "go", Name: "go"}, {Slug: "postgres", Name: "postgres"}}; !slices.Equal(got.Tags, want) {
+		if want := []tagJSON{{Slug: "go", Name: "go", Color: "slate"}, {Slug: "postgres", Name: "postgres", Color: "slate"}}; !slices.Equal(got.Tags, want) {
 			t.Errorf("tags = %v, want %v", got.Tags, want)
 		}
 	})

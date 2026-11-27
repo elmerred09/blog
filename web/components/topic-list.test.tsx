@@ -2,14 +2,15 @@ import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { TopicList, TopicNav } from "@/components/topic-list";
+import type { Tag } from "@/lib/api";
 
 describe("TopicList", () => {
   it("renders each tag, in order, as a link to its tag page", () => {
     render(
       <TopicList
         tags={[
-          { slug: "go", name: "Go" },
-          { slug: "postgres", name: "Postgres" },
+          { slug: "go", name: "Go", color: "slate" },
+          { slug: "postgres", name: "Postgres", color: "slate" },
         ]}
       />,
     );
@@ -34,9 +35,9 @@ describe("TopicList", () => {
 });
 
 describe("TopicNav", () => {
-  const tags = [
-    { slug: "go", name: "Go" },
-    { slug: "postgres", name: "Postgres" },
+  const tags: Tag[] = [
+    { slug: "go", name: "Go", color: "slate" },
+    { slug: "postgres", name: "Postgres", color: "slate" },
   ];
 
   it("links every topic and marks the current one", () => {
