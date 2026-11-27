@@ -26,6 +26,10 @@ export function TagColorList({ tags }: { tags: Tag[] }) {
     Object.fromEntries(tags.map((t) => [t.slug, t.color])),
   );
   const saved = useRef<Record<string, TagColor>>({ ...shown });
+  // The latest pick per tag. Next runs server actions one at a time, so saves
+  // land in click order, but only the latest pick's answer may change what
+  // the row shows: an earlier save failing must not undo a later pick.
+  const latest = useRef<Record<string, number>>({});
   const [status, setStatus] = useState<Record<string, Status>>({});
 
   if (tags.length === 0) {
@@ -37,12 +41,15 @@ export function TagColorList({ tags }: { tags: Tag[] }) {
   }
 
   async function choose(slug: string, color: TagColor) {
+    const pick = (latest.current[slug] ?? 0) + 1;
+    latest.current[slug] = pick;
     setShown((s) => ({ ...s, [slug]: color }));
     setStatus((s) => ({ ...s, [slug]: { kind: "saving" } }));
     let next: Status;
     try {
       const result = await setTagColor({ slug, color });
       if (result.ok) {
+        // Every save that lands is the stored color, latest pick or not.
         saved.current[slug] = result.value.color;
         next = { kind: "saved" };
       } else {
@@ -50,6 +57,9 @@ export function TagColorList({ tags }: { tags: Tag[] }) {
       }
     } catch {
       next = { kind: "error", message: "Couldn't save the color. Try again." };
+    }
+    if (latest.current[slug] !== pick) {
+      return;
     }
     if (next.kind === "error") {
       setShown((s) => ({ ...s, [slug]: saved.current[slug] }));
