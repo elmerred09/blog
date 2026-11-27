@@ -7,8 +7,7 @@ type Props = {
 };
 
 // The home page's topic column, styled after the devTalk template: a heading
-// and a wrapping cloud of neutral chips. Each chip links home until the tag
-// filter exists.
+// and a wrapping cloud of neutral chips. Each chip links to its tag's page.
 export function TopicList({ tags }: Props) {
   if (tags.length === 0) {
     return null;
@@ -25,7 +24,7 @@ export function TopicList({ tags }: Props) {
         {tags.map((tag) => (
           <li key={tag.slug}>
             <Link
-              href="/"
+              href={`/tags/${tag.slug}`}
               className="flex h-10 items-center rounded-lg border border-line bg-card px-4 text-sm text-muted hover:underline"
             >
               {tag.name}

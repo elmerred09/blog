@@ -7,9 +7,8 @@ type Props = {
   className?: string;
 };
 
-// Every tag links home until the topic filter exists; then only the href
-// changes. relative z-10 keeps the link clickable above a card's stretched
-// title link.
+// Each tag links to its tag's page. relative z-10 keeps the link clickable
+// above a card's stretched title link.
 export function TagList({ tags, className = "" }: Props) {
   if (tags.length === 0) {
     return null;
@@ -19,7 +18,7 @@ export function TagList({ tags, className = "" }: Props) {
       {tags.map((tag) => (
         <li key={tag.slug}>
           <Link
-            href="/"
+            href={`/tags/${tag.slug}`}
             className="relative z-10 block rounded-md bg-chip px-2.5 py-1 text-xs font-medium text-brand-strong hover:underline"
           >
             {tag.name}

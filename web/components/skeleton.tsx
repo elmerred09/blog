@@ -80,6 +80,20 @@ export function PostListSkeleton() {
   );
 }
 
+// Stand-in for the tag page's heading. The "Topic" label is real; the
+// tag's name comes from the API.
+export function TagHeadingSkeleton() {
+  return (
+    <header className="mb-10 space-y-2">
+      <p className="text-sm font-medium text-muted">Topic</p>
+      <div className="relative overflow-hidden">
+        <div aria-hidden="true" className="h-12 w-64 rounded-sm bg-line" />
+        <Shimmer />
+      </div>
+    </header>
+  );
+}
+
 const postBodyLines = [
   ["full", "w-full"],
   ["full-2", "w-full"],
