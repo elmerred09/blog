@@ -108,6 +108,7 @@ func newEngine(d Deps) *gin.Engine {
 		g.POST("/preview", previewPost(d.Admin.Posts))
 		g.POST("/uploads", createUpload(d.Admin.Media))
 		g.GET("/tags", listTags(d.Tags, tags.All))
+		g.PATCH("/tags/:slug", setTagColor(d.Tags))
 	}
 
 	r.NoRoute(func(c *gin.Context) {

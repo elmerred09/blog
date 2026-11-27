@@ -235,7 +235,7 @@ func get(ctx context.Context, q *db.Queries, id uuid.UUID) (Post, error) {
 	}
 	postTags := make([]tags.Tag, len(tagRows))
 	for i, r := range tagRows {
-		postTags[i] = tags.Tag{Slug: r.Slug, Name: r.Name}
+		postTags[i] = tags.Tag{Slug: r.Slug, Name: r.Name, Color: r.Color}
 	}
 
 	return Post{

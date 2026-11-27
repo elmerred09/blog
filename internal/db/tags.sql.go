@@ -372,10 +372,11 @@ func (q *Queries) SetTagsForPost(ctx context.Context, arg SetTagsForPostParams) 
 	return result.RowsAffected(), nil
 }
 
-const updateTagColor = `-- name: UpdateTagColor :execrows
+const updateTagColor = `-- name: UpdateTagColor :one
 UPDATE tags
 SET color = $1, updated_at = CURRENT_TIMESTAMP
 WHERE slug = $2
+RETURNING slug, name, color
 `
 
 type UpdateTagColorParams struct {
@@ -383,14 +384,19 @@ type UpdateTagColorParams struct {
 	Slug  string
 }
 
-// index: tags_slug_key (unique on slug). Zero rows means no such tag.
+type UpdateTagColorRow struct {
+	Slug  string
+	Name  string
+	Color string
+}
+
+// index: tags_slug_key (unique on slug). No row means no such tag.
 // tags_color_check rejects a name outside the palette.
-func (q *Queries) UpdateTagColor(ctx context.Context, arg UpdateTagColorParams) (int64, error) {
-	result, err := q.db.Exec(ctx, updateTagColor, arg.Color, arg.Slug)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
+func (q *Queries) UpdateTagColor(ctx context.Context, arg UpdateTagColorParams) (UpdateTagColorRow, error) {
+	row := q.db.QueryRow(ctx, updateTagColor, arg.Color, arg.Slug)
+	var i UpdateTagColorRow
+	err := row.Scan(&i.Slug, &i.Name, &i.Color)
+	return i, err
 }
 
 const upsertTag = `-- name: UpsertTag :execrows

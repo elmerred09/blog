@@ -159,6 +159,7 @@ func TestAdminRequiresAuth(t *testing.T) {
 		{http.MethodPost, "/api/v1/admin/preview"},
 		{http.MethodPost, "/api/v1/admin/uploads"},
 		{http.MethodGet, "/api/v1/admin/tags"},
+		{http.MethodPatch, "/api/v1/admin/tags/go"},
 	}
 	for _, rt := range routes {
 		t.Run(rt.method+" "+rt.path, func(t *testing.T) {
@@ -346,4 +347,50 @@ func TestListTags(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSetTagColor(t *testing.T) {
+	t.Parallel()
+	api := newAdminAPI(t)
+	dbtest.InsertPost(t, api.pool, dbtest.WithSlug("tagged"), dbtest.WithTags("go"))
+
+	patch := func(slug string, body any) *httptest.ResponseRecorder {
+		return serve(t, api.h, adminRequest(t, http.MethodPatch, "/api/v1/admin/tags/"+slug, api.token, body))
+	}
+
+	t.Run("sets the color everywhere the tag shows", func(t *testing.T) {
+		rec := patch("go", map[string]any{"color": "teal"})
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d, body %s", rec.Code, rec.Body)
+		}
+		if got, want := decode[tagJSON](t, rec), (tagJSON{Slug: "go", Name: "go", Color: "teal"}); got != want {
+			t.Errorf("tag = %+v, want %+v", got, want)
+		}
+		post := decode[postJSON](t, get(t, api.h, "/api/v1/posts/tagged"))
+		if len(post.Tags) != 1 || post.Tags[0].Color != "teal" {
+			t.Errorf("post tags = %+v, want go in teal", post.Tags)
+		}
+	})
+
+	t.Run("a color outside the palette is a problem on color", func(t *testing.T) {
+		rec := patch("go", map[string]any{"color": "blue"})
+		wantError(t, rec, http.StatusBadRequest, codeInvalidRequest)
+		body := decode[errorBody](t, rec)
+		if len(body.Error.Problems) != 1 || body.Error.Problems[0].Field != "color" {
+			t.Errorf("problems = %+v, want one on color", body.Error.Problems)
+		}
+	})
+
+	for name, body := range map[string]any{
+		"an unknown field": map[string]any{"color": "teal", "name": "Go"},
+		"no body":          nil,
+	} {
+		t.Run(name+" is 400", func(t *testing.T) {
+			wantError(t, patch("go", body), http.StatusBadRequest, codeInvalidRequest)
+		})
+	}
+
+	t.Run("an unknown tag is 404", func(t *testing.T) {
+		wantError(t, patch("rust", map[string]any{"color": "teal"}), http.StatusNotFound, codeNotFound)
+	})
 }

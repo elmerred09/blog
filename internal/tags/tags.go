@@ -9,12 +9,27 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/elmerred09/blog/internal/db"
 	"github.com/elmerred09/blog/internal/slug"
+	"github.com/elmerred09/blog/internal/validation"
 )
 
-type Tag struct{ Slug, Name string }
+// Tag is a tag as pages show it. Color is a palette name (see Colors); it is
+// empty on tags parsed from input by FromNames, which the database gives the
+// default color when it creates them.
+type Tag struct{ Slug, Name, Color string }
+
+// ErrNotFound is a write to a tag that doesn't exist.
+var ErrNotFound = errors.New("tag not found")
+
+// Colors returns the palette names a tag's chip can take, in the order the
+// admin offers them; slate is the default. Keep it in step with
+// tags_color_check and web/lib/tag-colors.ts.
+func Colors() []string {
+	return []string{"slate", "rose", "orange", "amber", "green", "teal", "violet", "pink"}
+}
 
 // FromNames turns display names into tags, keeping their order. Names that
 // share a slug collapse to the first one. Every name with nothing
@@ -135,7 +150,26 @@ func (s *Store) List(ctx context.Context, scope Scope) ([]Counted, error) {
 	}
 	out := make([]Counted, len(rows))
 	for i, r := range rows {
-		out[i] = Counted{Slug: r.Slug, Name: r.Name, PublishedPosts: r.PublishedPosts}
+		out[i] = Counted{Tag: Tag{Slug: r.Slug, Name: r.Name, Color: r.Color}, PublishedPosts: r.PublishedPosts}
 	}
 	return out, nil
+}
+
+// SetColor sets the tag's chip color and returns the saved tag. A name
+// outside Colors is a validation error, an unknown slug ErrNotFound.
+func (s *Store) SetColor(ctx context.Context, tagSlug, color string) (Tag, error) {
+	if !slices.Contains(Colors(), color) {
+		return Tag{}, validation.New(validation.Problem{
+			Field:   "color",
+			Message: "color must be one of " + strings.Join(Colors(), ", "),
+		})
+	}
+	row, err := s.q.UpdateTagColor(ctx, db.UpdateTagColorParams{Slug: tagSlug, Color: color})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Tag{}, fmt.Errorf("set color of tag %q: %w", tagSlug, ErrNotFound)
+	}
+	if err != nil {
+		return Tag{}, fmt.Errorf("set color of tag %q: %w", tagSlug, err)
+	}
+	return Tag{Slug: row.Slug, Name: row.Name, Color: row.Color}, nil
 }

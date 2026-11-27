@@ -11,7 +11,7 @@ const results: SearchResult[] = [
     summary: "Why OFFSET gets slow.",
     published_at: "2026-10-02T12:00:00Z",
     reading_minutes: 7,
-    tags: [{ slug: "postgres", name: "Postgres" }],
+    tags: [{ slug: "postgres", name: "Postgres", color: "slate" }],
     snippet: [
       { text: "use ", match: false },
       { text: "keyset", match: true },

@@ -45,7 +45,7 @@ func TestSearchShape(t *testing.T) {
 	if !slices.Contains(body.Snippet, fragmentJSON{Text: "pelican", Match: true}) {
 		t.Errorf("body-hit snippet = %+v, want a matched pelican fragment", body.Snippet)
 	}
-	if want := []tagJSON{{Slug: "birds", Name: "birds"}}; !slices.Equal(body.Tags, want) {
+	if want := []tagJSON{{Slug: "birds", Name: "birds", Color: "slate"}}; !slices.Equal(body.Tags, want) {
 		t.Errorf("tags = %v, want %v", body.Tags, want)
 	}
 	if s := bySlug["title-hit"].Snippet; s == nil || len(s) != 0 {

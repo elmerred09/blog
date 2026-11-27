@@ -4,12 +4,13 @@ INSERT INTO tags (slug, name)
 VALUES (sqlc.arg(slug), sqlc.arg(name))
 ON CONFLICT (slug) DO NOTHING;
 
--- name: UpdateTagColor :execrows
--- index: tags_slug_key (unique on slug). Zero rows means no such tag.
+-- name: UpdateTagColor :one
+-- index: tags_slug_key (unique on slug). No row means no such tag.
 -- tags_color_check rejects a name outside the palette.
 UPDATE tags
 SET color = sqlc.arg(color), updated_at = CURRENT_TIMESTAMP
-WHERE slug = sqlc.arg(slug);
+WHERE slug = sqlc.arg(slug)
+RETURNING slug, name, color;
 
 -- name: GetTagsBySlugs :many
 -- index: tags_slug_key (unique on slug), one probe per slug in the array.

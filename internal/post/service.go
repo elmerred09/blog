@@ -95,7 +95,7 @@ func (s *Service) ListByTag(ctx context.Context, tagSlug string, p ListParams) (
 	if len(page.Items) == 0 {
 		return TagPage{}, ErrNotFound
 	}
-	return TagPage{Tag: Tag{Slug: tag.Slug, Name: tag.Name}, Page: page}, nil
+	return TagPage{Tag: Tag{Slug: tag.Slug, Name: tag.Name, Color: tag.Color}, Page: page}, nil
 }
 
 // keyset is a list's two queries on the (published_at, id) order. after reads
@@ -255,7 +255,7 @@ func tagsFor(ctx context.Context, q *db.Queries, postIDs []uuid.UUID) (map[uuid.
 	// Rows arrive sorted by slug, so appending keeps each post's tags sorted.
 	tagsByPost := make(map[uuid.UUID][]Tag, len(postIDs))
 	for _, r := range rows {
-		tagsByPost[r.PostID] = append(tagsByPost[r.PostID], Tag{Slug: r.Slug, Name: r.Name})
+		tagsByPost[r.PostID] = append(tagsByPost[r.PostID], Tag{Slug: r.Slug, Name: r.Name, Color: r.Color})
 	}
 	return tagsByPost, nil
 }
@@ -324,7 +324,7 @@ func (s *Service) Get(ctx context.Context, slug string) (Post, error) {
 	}
 	tags := make([]Tag, len(tagRows))
 	for i, r := range tagRows {
-		tags[i] = Tag{Slug: r.Slug, Name: r.Name}
+		tags[i] = Tag{Slug: r.Slug, Name: r.Name, Color: r.Color}
 	}
 
 	return Post{

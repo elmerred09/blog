@@ -8,8 +8,8 @@ describe("TagList", () => {
     render(
       <TagList
         tags={[
-          { slug: "postgres", name: "Postgres" },
-          { slug: "go", name: "Go" },
+          { slug: "postgres", name: "Postgres", color: "slate" },
+          { slug: "go", name: "Go", color: "slate" },
         ]}
       />,
     );

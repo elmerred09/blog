@@ -444,6 +444,46 @@ paths:
         "503":
           $ref: "#/components/responses/Timeout"
 
+  /api/v1/admin/tags/{slug}:
+    patch:
+      operationId: setTagColor
+      summary: Set a tag's chip color to a palette name.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TagColorUpdate"
+      responses:
+        "200":
+          description: The tag with its new color.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tag"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/TooLarge"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Timeout"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -524,12 +564,28 @@ components:
     Tag:
       type: object
       additionalProperties: false
-      required: [slug, name]
+      required: [slug, name, color]
       properties:
         slug:
           type: string
         name:
           type: string
+        color:
+          $ref: "#/components/schemas/TagColor"
+
+    TagColor:
+      description: The tag chip's palette color. New tags are slate.
+      type: string
+      enum: [slate, rose, orange, amber, green, teal, violet, pink]
+
+    TagColorUpdate:
+      type: object
+      additionalProperties: false
+      required: [color]
+      properties:
+        color:
+          type: string
+          description: A TagColor. Any other value is a 400 with a problem on color.
 
     ReadingMinutes:
       description: Estimated minutes to read the body, rounded up from its word count.

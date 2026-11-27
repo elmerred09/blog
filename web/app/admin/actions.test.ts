@@ -45,7 +45,7 @@ function saved(slug: string): AdminPost {
     created_at: "2026-10-18T11:00:00Z",
     updated_at: "2026-10-18T12:05:00.000001Z",
     state: "scheduled",
-    tags: [{ slug: "postgres", name: "Postgres" }],
+    tags: [{ slug: "postgres", name: "Postgres", color: "slate" }],
   };
 }
 

@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -26,5 +27,32 @@ func listTags(store *tags.Store, scope tags.Scope) gin.HandlerFunc {
 			out[i] = tagJSON(row.Tag)
 		}
 		c.JSON(http.StatusOK, tagsJSON{Tags: out})
+	}
+}
+
+type tagColorJSON struct {
+	Color string `json:"color"`
+}
+
+// setTagColor sets a tag's chip color for the admin and returns the tag.
+func setTagColor(store *tags.Store) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var body tagColorJSON
+		if !decodeJSON(c, &body) {
+			return
+		}
+		tag, err := store.SetColor(c.Request.Context(), c.Param("slug"), body.Color)
+		if writeInvalid(c, err) {
+			return
+		}
+		if errors.Is(err, tags.ErrNotFound) {
+			writeError(c, http.StatusNotFound, codeNotFound, "tag not found")
+			return
+		}
+		if err != nil {
+			internalError(c, err)
+			return
+		}
+		c.JSON(http.StatusOK, tagJSON(tag))
 	}
 }

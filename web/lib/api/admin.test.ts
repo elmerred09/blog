@@ -42,7 +42,7 @@ const post: AdminPost = {
   created_at: "2026-10-18T11:00:00Z",
   updated_at: LOCK,
   state: "draft",
-  tags: [{ slug: "postgres", name: "Postgres" }],
+  tags: [{ slug: "postgres", name: "Postgres", color: "slate" }],
 };
 
 const input: AdminPostInput = {
@@ -346,7 +346,7 @@ describe("createImageUpload", () => {
 
 describe("listAdminTags", () => {
   it("returns every tag", async () => {
-    const tags = [{ slug: "drafts-only", name: "Drafts only" }];
+    const tags = [{ slug: "drafts-only", name: "Drafts only", color: "slate" }];
     stubFetch(json(200, { tags }));
 
     await expect(listAdminTags(admin)).resolves.toEqual(tags);

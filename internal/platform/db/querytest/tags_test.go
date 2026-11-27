@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/elmerred09/blog/internal/db"
@@ -100,17 +101,20 @@ func TestUpdateTagColor(t *testing.T) {
 		t.Errorf("new tag's color = %q, want the default %q", got, "slate")
 	}
 
-	n, err := q.UpdateTagColor(ctx, db.UpdateTagColorParams{Slug: "go", Color: "teal"})
-	if err != nil || n != 1 {
-		t.Fatalf("UpdateTagColor(go, teal) = %d, %v; want 1 row", n, err)
+	row, err := q.UpdateTagColor(ctx, db.UpdateTagColorParams{Slug: "go", Color: "teal"})
+	if err != nil {
+		t.Fatalf("UpdateTagColor(go, teal): %v", err)
+	}
+	if want := (db.UpdateTagColorRow{Slug: "go", Name: "go", Color: "teal"}); row != want {
+		t.Errorf("returned row = %+v, want %+v", row, want)
 	}
 	if got := color(); got != "teal" {
 		t.Errorf("color after update = %q, want %q", got, "teal")
 	}
 
-	n, err = q.UpdateTagColor(ctx, db.UpdateTagColorParams{Slug: "rust", Color: "teal"})
-	if err != nil || n != 0 {
-		t.Errorf("UpdateTagColor(unknown slug) = %d, %v; want 0 rows", n, err)
+	_, err = q.UpdateTagColor(ctx, db.UpdateTagColorParams{Slug: "rust", Color: "teal"})
+	if !errors.Is(err, pgx.ErrNoRows) {
+		t.Errorf("UpdateTagColor(unknown slug) err = %v, want pgx.ErrNoRows", err)
 	}
 
 	_, err = q.UpdateTagColor(ctx, db.UpdateTagColorParams{Slug: "go", Color: "blue"})

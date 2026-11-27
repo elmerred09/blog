@@ -76,7 +76,7 @@ func TestCreateAndGet(t *testing.T) {
 	if !got.UpdatedAt.Equal(created.UpdatedAt) || got.UpdatedAt.IsZero() {
 		t.Errorf("updated_at = %v, created returned %v", got.UpdatedAt, created.UpdatedAt)
 	}
-	want := []tags.Tag{{Slug: "go", Name: "Go"}, {Slug: "postgres", Name: "Postgres"}}
+	want := []tags.Tag{{Slug: "go", Name: "Go", Color: "slate"}, {Slug: "postgres", Name: "Postgres", Color: "slate"}}
 	if !slices.Equal(got.Tags, want) {
 		t.Errorf("tags = %+v, want %+v", got.Tags, want)
 	}
@@ -268,7 +268,7 @@ func TestTagSyncOnEdit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
-	if want := []tags.Tag{{Slug: "go", Name: "go"}, {Slug: "postgres", Name: "Postgres"}}; !slices.Equal(created.Tags, want) {
+	if want := []tags.Tag{{Slug: "go", Name: "go", Color: "slate"}, {Slug: "postgres", Name: "Postgres", Color: "slate"}}; !slices.Equal(created.Tags, want) {
 		t.Fatalf("tags = %+v, want %+v (the existing go tag keeps its name)", created.Tags, want)
 	}
 
@@ -278,7 +278,7 @@ func TestTagSyncOnEdit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Update: %v", err)
 	}
-	if want := []tags.Tag{{Slug: "go", Name: "go"}, {Slug: "search", Name: "Search"}}; !slices.Equal(saved.Tags, want) {
+	if want := []tags.Tag{{Slug: "go", Name: "go", Color: "slate"}, {Slug: "search", Name: "Search", Color: "slate"}}; !slices.Equal(saved.Tags, want) {
 		t.Errorf("tags = %+v, want %+v", saved.Tags, want)
 	}
 
