@@ -3,7 +3,7 @@ GOROOT := $(shell $(GO) env GOROOT)
 GOPATH := $(shell $(GO) env GOPATH)
 
 # Node comes from nvm, at the major version in web/.nvmrc. nvm only loads in
-# interactive shells, so make (and the git and Cursor hooks that call it) put
+# interactive shells, so make (and the git and Claude Code hooks that call it) put
 # the newest installed matching version first on PATH. Prepended, not appended,
 # so it wins over any Windows npm that WSL adds to PATH.
 NODE_MAJOR := $(shell cat web/.nvmrc 2>/dev/null)

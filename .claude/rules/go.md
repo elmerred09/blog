@@ -1,7 +1,7 @@
 ---
 description: Go conventions for the blog API (errors, context, structure, tests)
-globs: **/*.go
-alwaysApply: false
+paths:
+  - "**/*.go"
 ---
 
 # Go Conventions

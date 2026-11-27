@@ -1,7 +1,7 @@
 ---
 description: Next.js conventions for the blog frontend
-globs: web/**
-alwaysApply: false
+paths:
+  - "web/**"
 ---
 
 # Web (Next.js App Router)

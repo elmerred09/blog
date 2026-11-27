@@ -65,7 +65,7 @@ Before finishing a change, `make lint` and `make test` should pass. For changes 
 
 ## Conventions
 
-Scoped rules live in `.cursor/rules/` (`go.mdc`, `sql.mdc`, `web.mdc`). Bugbot doesn't read them; its review checklist is `.cursor/BUGBOT.md`, so when you add or change a rule there, update that file too. Key points:
+Scoped rules live in `.claude/rules/` (`go.md`, `sql.md`, `web.md`); Claude Code loads each one when it works on files matching its `paths:`. Project skills (`explain-query`, `new-migration`) live in `.claude/skills/`. `CLAUDE.md` and `web/CLAUDE.md` only import the `AGENTS.md` beside them, so edit `AGENTS.md`. Bugbot doesn't read the rules; its review checklist is `.cursor/BUGBOT.md`, so when you add or change a rule, update that file too. Key points:
 
 - Wrap errors with `%w`, pass `context.Context` first, no global state, table-driven tests.
 - Migrations are append-only. Every query needs an index justification. Use keyset pagination on `(published_at, id)`, never `OFFSET`.
@@ -86,9 +86,9 @@ Changes reach `main` through pull requests. Commit your own work before you fini
 
 ## Automation you should know about
 
-- After you edit a Go file, a hook runs `gofmt` on it. After edits under `db/queries` or `db/migrations`, it runs `make sqlc`. After you edit a file under `web/`, it runs Prettier on it. After you edit `api/openapi.yaml`, it runs `make web-types`.
-- When you stop, a hook runs `make lint` and asks you to continue if it reports issues. It doesn't run the web checks.
-- `.cursor/permissions.json` steers Cursor's Auto-review run mode: local git, pushing a feature branch, and `gh pr create` can run without approval; pushes to `main`, force pushes, `--no-verify`, merges, and commands that discard uncommitted work should be sent for approval. It is guidance for a classifier, not a hard block, so follow the Commits rules regardless.
+- The Claude Code hooks are in `.claude/settings.json`, with their scripts in `.claude/hooks/`. After you edit a Go file with the Edit or Write tool, a hook runs `gofmt` on it. After edits under `db/queries` or `db/migrations`, it runs `make sqlc`. After you edit a file under `web/`, it runs Prettier on it. After you edit `api/openapi.yaml`, it runs `make web-types`. Files changed through a shell command don't trigger it; run the matching `make` target yourself.
+- When you stop, a hook runs `make lint` and asks you to continue once if it reports issues. It doesn't run the web checks.
+- The `permissions` in `.claude/settings.json` let local git, `git push -u origin HEAD`, and `gh pr create`/`view`/`checks`/`diff` run without a prompt, and ask first for pushes to `main`, force pushes, `--no-verify`, `git add -A`/`.`, merges, `gh api`, and commands that discard uncommitted work. A `PreToolUse` hook also asks before any `git push` while `main` is checked out. These are command patterns, not a hard block, so follow the Commits rules regardless. Personal overrides go in the gitignored `.claude/settings.local.json`.
 - Git hooks (lefthook) run lint (which includes the gofmt check), `sqlc diff` and `make chroma-css-check` on commit, and tests on push. For `web/` and `api/openapi.yaml`, they run the web lint, typecheck, Prettier check and API types check on commit (each only when matching files are staged), and `make web-test` on push.
 
 - CI (`.github/workflows/ci.yml`, GitHub Actions) runs on pull requests and pushes to `main`, calling the same `make` targets. The `go` job runs `fmt-check`, `lint` (golangci-lint v2.14.0, built from source with the repo's Go), `sqlc-check`, `chroma-css-check`, `deps-check` and `test` (Docker for the testcontainers tests). The `web` job runs `web-install`, `web-check` and `web-build`. The `e2e` job starts the compose Postgres and RustFS, caches Playwright's browsers by version, runs `make e2e-install` and `make e2e`, and uploads the report and traces when it fails. Unlike the stop hook, CI runs the web checks. It doesn't use nvm, so don't call `make node-check` there. Keep the golangci-lint version in the workflow in step with the one you use locally.

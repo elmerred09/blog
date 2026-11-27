@@ -1,7 +1,7 @@
 ---
 description: SQL conventions for migrations and sqlc queries
-globs: db/**
-alwaysApply: false
+paths:
+  - "db/**"
 ---
 
 # SQL and Migrations

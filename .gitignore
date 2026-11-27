@@ -2,3 +2,4 @@
 /content/
 
 .env
+.claude/settings.local.json

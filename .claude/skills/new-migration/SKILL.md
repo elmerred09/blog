@@ -5,7 +5,7 @@ description: Create a goose SQL migration for the blog's Postgres schema, verify
 
 # New Migration
 
-Migrations live in `db/migrations` and are append-only (see `.cursor/rules/sql.mdc`). Never edit a migration that has been committed.
+Migrations live in `db/migrations` and are append-only (see `.claude/rules/sql.md`). Never edit a migration that has been committed.
 
 SQL is a learning goal for this project: create the file skeleton, but let the user write the schema SQL unless they ask you to draft it.
 
