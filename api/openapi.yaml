@@ -187,6 +187,44 @@ paths:
         "503":
           $ref: "#/components/responses/Timeout"
 
+  /api/v1/tags/{slug}/posts:
+    get:
+      operationId: listPostsByTag
+      summary: A tag's published posts, newest first, with keyset pagination.
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+        - name: cursor
+          in: query
+          description: The previous page's next_cursor or prev_cursor. Opaque; don't build or parse it.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The tag and one page of its posts. Never empty; a tag on no published post, or a cursor past the last one, is a 404.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TagPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Timeout"
+
   /api/v1/admin/posts:
     get:
       operationId: listAdminPosts
@@ -605,6 +643,27 @@ components:
       additionalProperties: false
       required: [items, next_cursor, prev_cursor]
       properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PostListItem"
+        next_cursor:
+          description: Pass as ?cursor= for the next page. Null on the last page.
+          type: string
+          nullable: true
+        prev_cursor:
+          description: Pass as ?cursor= for the previous page. Null on the first page.
+          type: string
+          nullable: true
+
+    TagPage:
+      description: A Page plus its tag. The fields are repeated rather than built with allOf, because in OpenAPI 3.0 additionalProperties false applies to each allOf branch separately.
+      type: object
+      additionalProperties: false
+      required: [tag, items, next_cursor, prev_cursor]
+      properties:
+        tag:
+          $ref: "#/components/schemas/Tag"
         items:
           type: array
           items:

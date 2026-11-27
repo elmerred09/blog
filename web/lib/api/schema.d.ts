@@ -140,6 +140,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tags/{slug}/posts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A tag's published posts, newest first, with keyset pagination. */
+        get: operations["listPostsByTag"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/posts": {
         parameters: {
             query?: never;
@@ -291,6 +308,15 @@ export interface components {
             items: components["schemas"]["SitemapEntry"][];
         };
         Page: {
+            items: components["schemas"]["PostListItem"][];
+            /** @description Pass as ?cursor= for the next page. Null on the last page. */
+            next_cursor: string | null;
+            /** @description Pass as ?cursor= for the previous page. Null on the first page. */
+            prev_cursor: string | null;
+        };
+        /** @description A Page plus its tag. The fields are repeated rather than built with allOf, because in OpenAPI 3.0 additionalProperties false applies to each allOf branch separately. */
+        TagPage: {
+            tag: components["schemas"]["Tag"];
             items: components["schemas"]["PostListItem"][];
             /** @description Pass as ?cursor= for the next page. Null on the last page. */
             next_cursor: string | null;
@@ -705,6 +731,36 @@ export interface operations {
                     "application/json": components["schemas"]["TagList"];
                 };
             };
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Timeout"];
+        };
+    };
+    listPostsByTag: {
+        parameters: {
+            query?: {
+                limit?: number;
+                /** @description The previous page's next_cursor or prev_cursor. Opaque; don't build or parse it. */
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The tag and one page of its posts. Never empty; a tag on no published post, or a cursor past the last one, is a 404. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
             500: components["responses"]["Internal"];
             503: components["responses"]["Timeout"];
         };
