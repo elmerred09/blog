@@ -31,15 +31,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-// Laid out like the devTalk topic page: "Topics * <name>" on one line, a row
-// of every topic, then the posts in two columns.
+// Laid out like the devTalk topic page, 80px apart: "Topics * <name>" on one
+// line, a row of every topic, then the posts in two columns.
 export default function TagPage({ params, searchParams }: Props) {
   return (
     <Suspense
       fallback={
         <>
           <TagHeadingSkeleton />
-          <div className="mb-10">
+          <div className="mb-20">
             <TopicNavSkeleton />
           </div>
           <PostListSkeleton columns={2} />
@@ -69,14 +69,14 @@ async function TagPosts({
 
   return (
     <>
-      <header className="mb-10">
+      <header className="mb-20">
         <h1 className={tagHeadingClass}>
           <span>Topics</span>
           <span aria-hidden="true">*</span>
           <span className="min-w-0 break-words">{page.tag.name}</span>
         </h1>
       </header>
-      <div className="mb-10">
+      <div className="mb-20">
         <Suspense fallback={<TopicNavSkeleton />}>
           <Topics current={slug} />
         </Suspense>

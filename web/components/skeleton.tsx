@@ -114,7 +114,7 @@ export const tagHeadingClass =
 // comes from the API.
 export function TagHeadingSkeleton() {
   return (
-    <header className="mb-10">
+    <header className="mb-20">
       <div className={tagHeadingClass}>
         <span>Topics</span>
         <span aria-hidden="true">*</span>
