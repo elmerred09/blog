@@ -23,6 +23,24 @@ describe("TagList", () => {
     ]);
   });
 
+  it("colors each chip by its tag's palette color", () => {
+    render(
+      <TagList
+        tags={[
+          { slug: "postgres", name: "Postgres", color: "teal" },
+          { slug: "go", name: "Go", color: "slate" },
+        ]}
+      />,
+    );
+
+    const [postgres, go] = within(
+      screen.getByRole("list", { name: "Tags" }),
+    ).getAllByRole("link");
+    expect(postgres.className).toContain("bg-tag-teal");
+    expect(postgres.className).toContain("text-tag-teal-text");
+    expect(go.className).toContain("bg-tag-slate");
+  });
+
   it("renders nothing when there are no tags", () => {
     render(<TagList tags={[]} />);
 
