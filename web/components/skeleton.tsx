@@ -105,13 +105,25 @@ export function PostListSkeleton({ columns = 1 }: { columns?: 1 | 2 }) {
 
 // Stand-in for the tag page's heading. The "Topic" label is real; the
 // tag's name comes from the API.
+// The devTalk topic page heading: "Topics * <name>" on one 48px line. Shared
+// with the tag page so the skeleton and the real heading line up.
+export const tagHeadingClass =
+  "flex flex-wrap gap-x-2 text-5xl leading-[1.1] font-semibold tracking-[-2px]";
+
+// Stand-in for the tag page heading. "Topics *" is real: only the name
+// comes from the API.
 export function TagHeadingSkeleton() {
   return (
-    <header className="mb-10 space-y-2">
-      <p className="text-sm font-medium text-muted">Topic</p>
-      <div className="relative overflow-hidden">
-        <div aria-hidden="true" className="h-12 w-64 rounded-sm bg-line" />
-        <Shimmer />
+    <header className="mb-10">
+      <div className={tagHeadingClass}>
+        <span>Topics</span>
+        <span aria-hidden="true">*</span>
+        <div
+          aria-hidden="true"
+          className="relative h-[1.1em] w-64 overflow-hidden rounded-sm bg-line"
+        >
+          <Shimmer />
+        </div>
       </div>
     </header>
   );

@@ -68,7 +68,7 @@ describe("TagHeadingSkeleton", () => {
   it("keeps the label and hides the placeholder name", () => {
     const { container } = render(<TagHeadingSkeleton />);
 
-    expect(screen.getByText("Topic")).toBeTruthy();
+    expect(screen.getByText("Topics")).toBeTruthy();
     expect(screen.queryByRole("heading")).toBeNull();
     expect(container.querySelector('[aria-hidden="true"]')).toBeTruthy();
   });

@@ -8,6 +8,7 @@ import { PostList } from "@/components/post-list";
 import {
   PostListSkeleton,
   TagHeadingSkeleton,
+  tagHeadingClass,
   TopicNavSkeleton,
 } from "@/components/skeleton";
 import { TopicNav } from "@/components/topic-list";
@@ -30,8 +31,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-// Laid out like the devTalk topic page: the tag's name, a row of every
-// topic, then the posts in two columns.
+// Laid out like the devTalk topic page: "Topics * <name>" on one line, a row
+// of every topic, then the posts in two columns.
 export default function TagPage({ params, searchParams }: Props) {
   return (
     <Suspense
@@ -68,10 +69,11 @@ async function TagPosts({
 
   return (
     <>
-      <header className="mb-10 space-y-2">
-        <p className="text-sm font-medium text-muted">Topic</p>
-        <h1 className="text-5xl font-semibold tracking-tight break-words">
-          {page.tag.name}
+      <header className="mb-10">
+        <h1 className={tagHeadingClass}>
+          <span>Topics</span>
+          <span aria-hidden="true">*</span>
+          <span className="min-w-0 break-words">{page.tag.name}</span>
         </h1>
       </header>
       <div className="mb-10">
