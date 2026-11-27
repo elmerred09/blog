@@ -3,3 +3,6 @@
 
 .env
 .claude/settings.local.json
+
+# Playwright MCP screenshots and traces (.mcp.json)
+.playwright-mcp/
