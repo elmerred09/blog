@@ -24,6 +24,19 @@ describe("buildSitemap", () => {
     ]);
   });
 
+  it("lists each tag page after the posts, without a last-modified time", () => {
+    const entries = buildSitemap(
+      site,
+      [{ slug: "a-post", lastModified: "2026-10-02T08:30:00Z" }],
+      ["go", "postgres"],
+    );
+
+    expect(entries.slice(2)).toEqual([
+      { url: `${site}/tags/go` },
+      { url: `${site}/tags/postgres` },
+    ]);
+  });
+
   it("omits a last-modified time when nothing is published", () => {
     expect(buildSitemap(`${site}/`, [])).toEqual([{ url: `${site}/` }]);
   });
