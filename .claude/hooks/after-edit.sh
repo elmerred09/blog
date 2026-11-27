@@ -1,12 +1,14 @@
 #!/bin/bash
 
 # after-edit.sh - Format Go and web files, and regenerate sqlc output and the
-# web API types, after agent edits.
+# web API types, after Claude edits a file (PostToolUse on Edit and Write).
 
 input=$(cat)
 
 file=$(printf '%s' "$input" | sed -n 's/.*"file_path"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)
 [ -z "$file" ] && exit 0
+
+cd "${CLAUDE_PROJECT_DIR:-.}" || exit 0
 
 case "$file" in
   */internal/db/* | */web/lib/api/schema.d.ts | */web/app/chroma.css | */web/node_modules/* | */web/.next/*)
